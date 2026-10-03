@@ -22,3 +22,10 @@ venv/
 # Editors
 .vscode/
 .idea/
+# Agent instruction files (kept local)
+AGENTS.md
+CLAUDE.md
+ 
+
+# Agent skills (restore with: npx skills experimental_install)
+.claude/skills/

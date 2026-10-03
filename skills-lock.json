@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "skills": {
+    "figma-create-new-file": {
+      "source": "figma/mcp-server-guide",
+      "sourceType": "github",
+      "skillPath": "skills/figma-create-new-file/SKILL.md",
+      "computedHash": "b9e5a91ed30d5b0650ea485f9e4c8114d998562168360b2ac2d3cbab46602556"
+    },
+    "figma-design-to-code": {
+      "source": "figma/mcp-server-guide",
+      "sourceType": "github",
+      "skillPath": "skills/figma-design-to-code/SKILL.md",
+      "computedHash": "6676accbe84e37deee2910458c5fa5908e1809d0adc3d3e19a74ba40da4c3efa"
+    },
+    "figma-generate-design": {
+      "source": "figma/mcp-server-guide",
+      "sourceType": "github",
+      "skillPath": "skills/figma-generate-design/SKILL.md",
+      "computedHash": "5f232b23019ae9b69a6f7f578bd47033f25191ca8c3f8b52b0ce104c3c6355a4"
+    },
+    "figma-generate-library": {
+      "source": "figma/mcp-server-guide",
+      "sourceType": "github",
+      "skillPath": "skills/figma-generate-library/SKILL.md",
+      "computedHash": "4c206283e766c74bd92eae91503574432db548edf5ae0c6080ed0e22d64f312f"
+    },
+    "figma-implement-motion": {
+      "source": "figma/mcp-server-guide",
+      "sourceType": "github",
+      "skillPath": "skills/figma-implement-motion/SKILL.md",
+      "computedHash": "8cc1122a4dee776a240eb2678253a0d9e87390c7dfc4c8fda22589899ca472af"
+    },
+    "figma-use": {
+      "source": "figma/mcp-server-guide",
+      "sourceType": "github",
+      "skillPath": "skills/figma-use/SKILL.md",
+      "computedHash": "ce6c06d0075968aa6062db47085356e95002ec70c14c2a0e08b2b865ee1e08cb"
+    },
+    "figma-use-motion": {
+      "source": "figma/mcp-server-guide",
+      "sourceType": "github",
+      "skillPath": "skills/figma-use-motion/SKILL.md",
+      "computedHash": "600529f5daf5401ca02490bebc78d403302a61691ca81e1a62a4737bd25b4867"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "89496d5dd00f4810205f351759594fc2742bf8eea85a2f2b2d1de59f4bd91576"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "6b5ebc0ee592c7d4620827b20f1554706607e3363835a951c78ee37ac63a7df0"
+    },
+    "shadcn": {
+      "source": "shadcn-ui/ui",
+      "sourceType": "github",
+      "skillPath": "skills/shadcn/SKILL.md",
+      "computedHash": "f615de216e085a84e31593ad0fa9062232adc40cd87b7c7ab2b8e49abf6500be"
+    }
+  }
+}
