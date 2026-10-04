@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'onShell' | 'onShellOutline' | 'accent' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'onShell' | 'onShellOutline' | 'accent' | 'danger' | 'dangerOutline';
 export type ButtonSize = 'md' | 'sm' | 'lg';
 
 const base = 'inline-flex items-center justify-center gap-2 rounded-md font-semibold whitespace-nowrap transition-[background-color,color,border-color,transform] duration-150 ease-out-expo active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 disabled:pointer-events-none';
@@ -10,6 +10,7 @@ const variants: Record<ButtonVariant, string> = {
   secondary: 'bg-surface text-ink border border-line-strong hover:bg-surface-2',
   ghost: 'text-brand hover:bg-brand-soft',
   danger: 'bg-bad text-white hover:brightness-110',
+  dangerOutline: 'bg-surface text-bad border border-bad/40 hover:bg-bad-soft hover:border-bad',
   accent: 'bg-accent text-shell hover:brightness-95',
   onShell: 'bg-shell-ink text-shell hover:bg-white',
   onShellOutline: 'border border-shell-muted/60 text-shell-ink hover:bg-shell-active',

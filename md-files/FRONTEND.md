@@ -23,7 +23,7 @@ npm install && npm run dev      # http://127.0.0.1:5173, mock mode with sample d
 | --- | --- | --- |
 | `/` | Landing: scroll-linked hero (`ScrollHero`), texting, how it works. Nav is exactly *How it works · Texting · Sign in* | none |
 | `/signup`, `/signin` | Account (mock accepts any valid credentials) | none |
-| `/app` | Overview, top to bottom: texting banner, **Reminders**, **Your plan on file**, annual max per person (adapts to one person), **Chat transcript**, sign out. Texting opens as a popup (Connect texting button, sidebar block). Mock-only floating **Demo** button | `Snapshot`, `PUT /v1/preferences`, `POST /v1/transcripts`, link-code endpoints |
+| `/app` | Overview, top to bottom: texting banner, **Reminders**, **Your plan on file**, annual max per person (adapts to one person), sign out. Texting opens as a popup (Connect texting button, sidebar block). Mock-only floating **Demo** button | `Snapshot`, `PUT /v1/preferences`, `POST /v1/transcripts`, link-code endpoints |
 | `/app/chat` | AI buddy, same history as texts, **Email transcript** | `POST /v1/turns`, `GET /v1/turns/{id}` |
 | `/app/care`, `/app/settings` | Removed. Both redirect to `/app` | none |
 
