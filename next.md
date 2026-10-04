@@ -15,6 +15,7 @@ Final goal: full-stack deployment on AWS. **Order: RAG on Bedrock first, then th
 - [ ] Test with sample questions per patient (e.g. "Is Duke University Hospital in network for me?", "What will a crown cost?") and check every $ figure against the tables.
 
 ## 2. API layer
+- [x] RAG Lambda deployed and tested (see `record.md`). Remaining: API Gateway route to it, request auth, Guardrails, widen the corpus beyond the 20 patient rows.
 - [ ] Lambda and API Gateway following the `/v1` contract in `md-files/BACKEND.md` §4.
 - [ ] Put the Lambda in the RDS VPC and allow its security group (not a public IP). Connect as `api_reader` with an IAM token.
 - [ ] Grant `api_reader` access only to tables the API needs. Never expose `patients` without auth (Cognito).

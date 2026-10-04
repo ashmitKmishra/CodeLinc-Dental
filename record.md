@@ -30,6 +30,15 @@ The first account (010319218313, us-east-2) was abandoned: Bedrock was blocked p
 - Assumptions: all four people are on Lincoln Financial. Hospitals come from Lincoln's in-network and out-of-network lists in `nc_hospitals`. Cash cost is the average from `nc_dental_costs` (braces D8090, cleaning D1110, filling D2391, gum D4346, wisdom teeth D7240). Insurance math: allowed amount = 80% of cash; plan pays preventive 100%, basic 80%, major and ortho 50%. In-network patient pays allowed minus plan share. Out-of-network patient pays cash minus plan share. Orthodontic lifetime maximums are ignored.
 - Rebuild: `scripts/build_patient_treatment_vectors.py` (safe to rerun).
 
+## RAG Lambda (`backend/rag/`)
+
+- CloudFormation stack `codelinc-dental-rag` (`template.yaml`): Lambda `codelinc-dental-rag` (python3.12, arm64, 30 s, in the RDS VPC), a `bedrock-runtime` interface VPC endpoint (the VPC has no NAT), a security-group rule letting only the Lambda reach RDS on 8443, and a least-privilege role (Bedrock InvokeModel, `rds-db:connect` as `api_reader`).
+- `handler.py`: event `{"phone": "+1...", "question": "..."}`. Validates E.164 phone, embeds the question with Titan v2, searches pgvector **filtered to that phone** (so one patient never sees another's rows), then Bedrock Converse (default `us.anthropic.claude-haiku-4-5-20251001-v1:0`, set by the `ModelId` parameter) explains the rows. Every `$` figure in the reply must appear in the retrieved rows, otherwise the reply is replaced with the raw rows (`guardrail_replaced: true`).
+- DB access: IAM token as `api_reader` (no password; `pg8000` over SSL with the bundled RDS CA). `api_reader` has `SELECT` on `patient_treatment_embeddings` only.
+- Tested: Ashwani/filling cash returns "manual verification needed" with no price; Ashmit/braces quotes $2686.40 exactly; a bad phone returns 400.
+- Not built yet: API Gateway in front of it, auth, Bedrock Guardrails, answering from `nc_dental_costs` and `nc_hospitals` (today only the 20 patient rows are searchable).
+- Deploy: zip `handler.py` + `rds-global-bundle.pem` + `pip install pg8000`, upload to `s3://<data-bucket>/code/rag.zip`, then `aws cloudformation deploy` (parameters in the stack; see `template.yaml`).
+
 ## Gotchas
 
 - The hackathon Wi-Fi blocks outbound port 5432. Ports 443, 8080, 8443 and 2222 get through. To work around it the instance port was moved to **8443**, with an extra 8443 inbound rule for the dev IP. **Decision: it stays on 8443.** Use 8443 everywhere.
