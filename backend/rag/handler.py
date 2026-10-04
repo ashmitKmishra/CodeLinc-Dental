@@ -180,6 +180,28 @@ def _post_turn(conn, event, phone, body):
     return 200, {"turnId": str(rid), "conversationId": cid}
 
 
+def _bot_log(conn, event, phone, body):
+    """Stores an exchange the WhatsApp/SMS bot answered itself (greeting, general answer), so the whole thread shows in the app.
+    Direct invocations only: API Gateway events have a domainName and never get past this check."""
+    if "domainName" in event.get("requestContext", {}):
+        raise ApiErr(404, "not_found", "No such endpoint.")
+    channel, text, reply = body.get("channel"), str(body.get("text", "")).strip(), str(body.get("reply", "")).strip()
+    if channel not in ("whatsapp", "sms") or not text or not reply:
+        raise ApiErr(400, "invalid_request", "channel (whatsapp|sms), text and reply are required.")
+    cid = body.get("conversationId")
+    try:
+        uuid.UUID(str(cid))
+        known = conn.run("SELECT 1 FROM chat_messages WHERE phone = :p AND conversation_id = CAST(:c AS uuid) AND channel = :ch LIMIT 1",
+                         p=phone, c=cid, ch=channel)
+    except ValueError:
+        known = None
+    cid = str(cid) if known else str(uuid.uuid4())
+    for role, t in (("user", text), ("assistant", reply)):
+        conn.run("INSERT INTO chat_messages (phone, conversation_id, channel, role, text) VALUES (:p, CAST(:c AS uuid), :ch, :r, :t)",
+                 p=phone, c=cid, ch=channel, r=role, t=t)
+    return 200, {"conversationId": cid}
+
+
 def _uuid_or_404(value):
     try:
         uuid.UUID(str(value))
@@ -288,6 +310,8 @@ def _route(conn, event, method, path, query, body):
         return _list_messages(conn, phone, query)
     if method == "POST" and path == "/v1/turns":
         return _post_turn(conn, event, phone, body)
+    if method == "POST" and path == "/v1/bot/log":
+        return _bot_log(conn, event, phone, body)
     if method == "GET" and path.startswith("/v1/turns/"):
         return _get_turn(conn, phone, path[len("/v1/turns/"):])
     raise ApiErr(404, "not_found", "No such endpoint.")

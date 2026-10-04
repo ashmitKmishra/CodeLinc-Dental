@@ -148,11 +148,12 @@ def answer(phone, text, bot_number=None):
     """
     try:
         reply, model, conversation_id = None, None, None
+        last_conversation = history.last_conversation(phone)
         if GREETING.match(text.strip()):
             reply, model = intro(phone), "intro"
         elif floss.enabled():
             try:
-                reply, conversation_id = floss.ask(phone, text, history.last_conversation(phone))
+                reply, conversation_id = floss.ask(phone, text, last_conversation)
                 model = "floss-rag"
             except floss.NotMember:
                 pass
@@ -160,6 +161,14 @@ def answer(phone, text, bot_number=None):
                 log.exception("Floss failed for %s; answering with Bedrock instead", phone[-4:])
         if reply is None:
             reply, model = bedrock.ask(history.get(phone, HISTORY_TURNS), text)
+        if model and model != "floss-rag" and floss.enabled():
+            # Floss already saved its own turns; save the rest (greetings, general answers) so the website shows the whole chat.
+            try:
+                conversation_id = floss.log_turn(phone, text, reply, last_conversation)
+            except floss.NotMember:
+                pass  # not a member: no account, so nothing to show on the website
+            except Exception:
+                log.exception("Could not save %s's exchange to the website history", phone[-4:])
         if model:  # only store successful exchanges so history keeps alternating user/assistant
             history.add_turn(phone, text, reply, model, conversation_id)
         log.info("%s via %s: %r -> %r", phone[-4:], model, text, reply)
