@@ -41,8 +41,10 @@ The editable source is [`architecture.drawio`](docs/architecture/architecture.dr
 1. The person signs in with Amazon Cognito and asks in the web app. WhatsApp messages come in through a signed Twilio webhook on the same API.
 2. API Gateway checks the JWT (or Twilio's signature) and hands the request to the API Lambda.
 3. The Lambda takes the phone number from the verified token, never from the request. It replays the last 20 messages as context and searches pgvector for that person's rows.
-4. Bedrock does the language work. Code then looks up the stored estimates and does the arithmetic. A second call writes the reply from those facts. Titan Text Embeddings v2 handles the search.
+4. Bedrock does the language work. One Claude Haiku 4.5 call picks the person and treatment. Code then looks up the stored estimates and does the arithmetic. A second call writes the reply from those facts. Titan Text Embeddings v2 handles the search.
 5. Every dollar figure, email address, phone number and link in the reply must be one of the facts. If one isn't, the writer gets one retry, and after that code writes the reply. The Lambda saves both messages and returns the answer.
+
+In the diagram, WhatsApp goes through the signed route on the API. Today the bot Lambda in `backend/whatsapp-chatbot` sits in step 1 instead and calls the RAG function directly. The route on the branch above would move it onto the API.
 
 The six ideas behind it:
 
@@ -60,11 +62,10 @@ Live on AWS:
 - API Gateway and a Lambda behind it, with a Cognito authorizer
 - Chat answers from the picker and writer pipeline in `backend/rag`, tested offline with `python3 -m unittest backend/rag/test_advisor.py`
 - Postgres with pgvector: 20 treatment estimates (4 people, 5 conditions), 30 NC hospitals with contact details, 30 NC dental costs, users and chat history
+- The Floss AI WhatsApp bot in `backend/whatsapp-chatbot`: Twilio calls a Lambda that introduces Floss AI and sends questions from registered numbers to the same RAG function, so each answer comes from that member's own rows
 
-Built on the `whatsapp-chatbot`
-- A signed Twilio webhook route (`POST /v1/twilio/sms`) in the API Lambda that answers WhatsApp and SMS from the same chat history
-- A separate Lambda in `backend/whatsapp-chatbot` that introduces Floss AI and calls the same RAG function
-
+On a branch, not merged yet:
+- A signed Twilio webhook route (`POST /v1/twilio/sms`) inside the API Lambda, so WhatsApp and SMS can use the same API as the web app. Today the bot calls the RAG function directly.
 
 Not built:
 - Language detection and translation
@@ -95,7 +96,7 @@ Before a commit, run `npm run typecheck && npm test && npm run build`. To point 
 | `apps/web` | The React app: React 19, Vite, TypeScript, Tailwind v4, Motion, TanStack Query |
 | `packages/contracts` | The API contract (zod), plan fixtures from five carriers' PDFs, JSON Schema |
 | `backend/rag` | The API Lambda, the picker and writer pipeline, tests, deploy script, CloudFormation |
-| `backend/whatsapp-chatbot` | The WhatsApp bot (on its branch) |
+| `backend/whatsapp-chatbot` | The WhatsApp bot Lambda |
 | `infra` | CloudFormation for the website |
 | `db`, `scripts` | SQL tables, loaders, Cognito user and deploy scripts |
 | `docs` | Architecture diagram and screenshots |
