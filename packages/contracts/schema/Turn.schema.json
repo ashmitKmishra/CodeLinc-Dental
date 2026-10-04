@@ -33,7 +33,8 @@
           "enum": [
             "app",
             "sms",
-            "email"
+            "email",
+            "whatsapp"
           ]
         },
         "text": {

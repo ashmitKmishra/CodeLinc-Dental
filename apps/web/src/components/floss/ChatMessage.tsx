@@ -1,13 +1,14 @@
 import type { Message, MemberUsage, PendingAction, Snapshot } from '@floss/contracts';
-import { Mail, MessageSquare, Smartphone } from 'lucide-react';
+import { Mail, MessageCircle, MessageSquare, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { formatTime } from '@/lib/format';
 import { EstimateCard } from './EstimateCard';
 import { MemberUsageCard } from './MemberUsageCard';
 import { PendingActionCard } from './PendingActionCard';
+import { RichText } from './RichText';
 import { SequenceCard } from './SequenceCard';
 
-const channelMeta = { app: { label: 'App', icon: Smartphone, cls: 'text-brand' }, sms: { label: 'Text', icon: MessageSquare, cls: 'text-channel-text' }, email: { label: 'Email', icon: Mail, cls: 'text-channel-email' } } as const;
+const channelMeta = { app: { label: 'App', icon: Smartphone, cls: 'text-brand' }, sms: { label: 'Text', icon: MessageSquare, cls: 'text-channel-text' }, email: { label: 'Email', icon: Mail, cls: 'text-channel-email' }, whatsapp: { label: 'WhatsApp', icon: MessageCircle, cls: 'text-channel-text' } } as const;
 
 export function ChannelBadge({ channel }: { channel: Message['channel'] }) {
   const { label, icon: Icon, cls } = channelMeta[channel];
@@ -33,7 +34,7 @@ export function ChatMessage({ message: m, snapshot, busy, onConfirm, onCancel }:
     <article className={cn('flex gap-3', mine && 'justify-end')} aria-label={mine ? 'You' : 'Floss'}>
       {!mine && <span aria-hidden className="mt-1 inline-block size-7 shrink-0 rounded-[9px] bg-brand" />}
       <div className={cn('flex min-w-0 max-w-[min(100%,640px)] flex-col gap-2', mine && 'items-end')}>
-        <p className={cn('whitespace-pre-wrap rounded-lg px-4 py-3', mine ? (m.channel === 'sms' ? 'bg-channel-text text-on-brand' : 'bg-brand text-on-brand') : 'border border-line bg-surface')}>{m.text}</p>
+        <p className={cn('whitespace-pre-wrap rounded-lg px-4 py-3', mine ? (m.channel === 'sms' || m.channel === 'whatsapp' ? 'bg-channel-text text-on-brand' : 'bg-brand text-on-brand') : 'border border-line bg-surface')}><RichText text={m.text} /></p>
         {m.cards.map((c, i) => {
           if (c.type === 'estimate') return <div key={i} className="w-full"><EstimateCard estimate={c.estimate} memberName={memberName(c.estimate.memberId)} compact /></div>;
           if (c.type === 'sequence') return <div key={i} className="w-full"><SequenceCard sequence={c.sequence} /></div>;

@@ -47,6 +47,8 @@ with psycopg.connect(host=DB["Endpoint"]["Address"],port=DB["Endpoint"]["Port"],
         c.execute("INSERT INTO patient_treatment_embeddings VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::vector)",
                   (r[0],r[1],r[2],r[3],r[4],r[5],r[6],r[7],text,str(embed(text))))
     c.execute("CREATE INDEX ON patient_treatment_embeddings USING hnsw (embedding vector_cosine_ops)")
+    # DROP TABLE above removed the API's grant; restore it (role from db/04_users_chat.sql)
+    if c.execute("select 1 from pg_roles where rolname='api_app'").fetchone(): c.execute("GRANT SELECT ON patient_treatment_embeddings TO api_app")
     print("vectors stored", c.execute("select count(*) from patient_treatment_embeddings").fetchone()[0])
     q=str(embed("How much is a tooth filling for Ashwani without insurance?"))
     for d,dist in c.execute("select doc, embedding <=> %s::vector from patient_treatment_embeddings order by 2 limit 2",(q,)).fetchall(): print(round(dist,3),d[:150])

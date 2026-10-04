@@ -26,13 +26,15 @@ export class MockStore {
   messaging: Messaging = { status: 'unlinked', flossNumber, mode: 'simulated' };
   preferences: Preferences = { remindersOptIn: true, reminderDaysBefore: [60, 30, 14], quietHours: { start: '21:00', end: '09:00' } };
   revision = 1;
+  /** Live mode: the signed-in user's real household replaces the sample one. */
+  membersOverride: Member[] | null = null;
 
   constructor() {
     if (!planFixtures[this.planKey]) this.planKey = defaultPlanKey;
     this.seed();
   }
 
-  get members(): Member[] { return this.householdMode === 'solo' ? allMembers.slice(0, 1) : allMembers; }
+  get members(): Member[] { if (this.membersOverride) return this.membersOverride; return this.householdMode === 'solo' ? allMembers.slice(0, 1) : allMembers; }
   get plan(): PlanSummary { return planFixtures[this.planKey]!; }
   get procedures(): Procedure[] { return resolveProcedures(this.plan); }
   bump() { this.revision += 1; }

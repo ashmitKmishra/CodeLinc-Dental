@@ -1,4 +1,4 @@
-import type { Message, Preferences, Snapshot, Turn } from '@floss/contracts';
+import type { Conversation, Member, Message, Preferences, Snapshot, Turn } from '@floss/contracts';
 
 /** Errors always arrive in this shape, whichever adapter is in use. */
 export class FlossApiError extends Error {
@@ -12,9 +12,11 @@ export class FlossApiError extends Error {
 export interface FlossApi {
   readonly mode: 'mock' | 'live';
   getSnapshot(): Promise<Snapshot>;
-  sendTurn(text: string): Promise<{ turnId: string }>;
+  /** No conversationId starts a new chat; the reply says which conversation the turn landed in. */
+  sendTurn(text: string, conversationId?: string): Promise<{ turnId: string; conversationId?: string }>;
   getTurn(turnId: string): Promise<Turn>;
-  listMessages(opts?: { cursor?: string; limit?: number }): Promise<{ messages: Message[]; nextCursor: string | null }>;
+  listConversations(): Promise<Conversation[]>;
+  listMessages(opts?: { cursor?: string; limit?: number; conversationId?: string }): Promise<{ messages: Message[]; nextCursor: string | null }>;
   confirmAction(actionId: string): Promise<void>;
   cancelAction(actionId: string): Promise<void>;
   createLinkCode(): Promise<{ code: string; flossNumber: string; expiresAt: string }>;
@@ -30,5 +32,7 @@ export interface FlossApi {
     setHousehold(mode: 'family' | 'solo'): void;
     simulateText(): void;
     reset(): void;
+    /** Used by the live adapter to price the sample plan for the signed-in household. */
+    setMembers(members: Member[]): void;
   };
 }

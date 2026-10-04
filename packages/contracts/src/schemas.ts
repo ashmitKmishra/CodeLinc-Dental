@@ -263,13 +263,23 @@ export type Card = z.infer<typeof Card>;
 export const Message = z.object({
   id: z.string(),
   role: z.enum(['user', 'assistant', 'system']),
-  channel: z.enum(['app', 'sms', 'email']),
+  channel: z.enum(['app', 'sms', 'email', 'whatsapp']),
   text: z.string(),
   cards: z.array(Card),
   createdAt: IsoDateTime,
   delivery: z.object({ status: z.enum(['queued', 'sent', 'delivered', 'failed', 'simulated']), at: IsoDateTime }).optional(),
 });
 export type Message = z.infer<typeof Message>;
+
+/** One chat thread. Each belongs to a single channel, so the app and WhatsApp Messenger histories stay separate. */
+export const Conversation = z.object({
+  id: z.string(),
+  channel: Message.shape.channel,
+  title: z.string(),
+  updatedAt: IsoDateTime,
+  messageCount: z.number().int(),
+});
+export type Conversation = z.infer<typeof Conversation>;
 
 export const Turn = z.object({
   id: z.string(),
