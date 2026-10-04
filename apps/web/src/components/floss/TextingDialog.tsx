@@ -16,14 +16,20 @@ export function TextingDialog({ open, onClose, messaging }: { open: boolean; onC
   const getCode = useAction(() => api.createLinkCode().then((r) => setLink(r)));
   const unlink = useAction(() => api.unlinkPhone().then(() => setLink(null)));
   const joinText = link ? `JOIN ${link.code}` : '';
+  const liveLinked = messaging.status === 'linked' && messaging.mode === 'live';
   const copy = async (t: string) => { try { await navigator.clipboard.writeText(t); toast.success('Copied'); } catch { toast.error('Couldn’t copy. Select the text and copy it instead.'); } };
 
   return (
-    <Dialog open={open} onClose={onClose} title="Texting">
+    <Dialog open={open} onClose={onClose} title={liveLinked ? 'WhatsApp' : 'Texting'}>
       <div className="flex flex-col gap-5 p-5">
-        <div className="flex items-center gap-2"><Chip tone={messaging.status === 'linked' ? 'ok' : 'neutral'}>{statusLabel[messaging.status]}</Chip></div>
+        <div className="flex items-center gap-2"><Chip tone={messaging.status === 'linked' ? 'ok' : 'neutral'}>{liveLinked ? 'Connected' : statusLabel[messaging.status]}</Chip></div>
 
-        {messaging.status === 'linked' ? (
+        {liveLinked ? (
+          <div className="flex flex-col gap-3">
+            <p className="t-body-strong">Connected to {messaging.maskedPhone}</p>
+            <p className="text-ink-muted">Your account uses the number you signed in with, so there is nothing to link. Message Floss on WhatsApp from that number and the same conversation appears in Chat, under History.</p>
+          </div>
+        ) : messaging.status === 'linked' ? (
           <>
             <div className="flex flex-col gap-1">
               <p className="t-body-strong">Linked to {messaging.maskedPhone}</p>
@@ -52,7 +58,7 @@ export function TextingDialog({ open, onClose, messaging }: { open: boolean; onC
             <Button className="w-fit" onClick={() => getCode.mutate(undefined, { onError: (e) => toast.error(errorMessage(e)) })} disabled={getCode.isPending}>{getCode.isPending ? 'Getting a code…' : messaging.status === 'awaiting_text' ? 'Get a new code' : 'Get a code'}</Button>
           </>
         )}
-        {messaging.mode === 'simulated' && <p className="border-t border-line pt-4 t-small text-ink-muted">Texting is simulated in this demo. No real messages are sent.</p>}
+        {messaging.mode === 'simulated' && !liveLinked && <p className="border-t border-line pt-4 t-small text-ink-muted">Texting is simulated in this demo. No real messages are sent.</p>}
       </div>
     </Dialog>
   );

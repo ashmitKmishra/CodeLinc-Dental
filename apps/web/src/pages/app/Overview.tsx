@@ -1,9 +1,10 @@
-import { LogOut, MessageSquare } from 'lucide-react';
+import { CheckCircle2, LogOut, MessageSquare } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { MemberUsageCard } from '@/components/floss/MemberUsageCard';
 import { PlanOnFilePanel, RemindersPanel } from '@/components/floss/OverviewPanels';
 import { useOpenTexting } from '@/components/floss/TextingContext';
 import { Avatar } from '@/components/ui/Avatar';
-import { Button } from '@/components/ui/Button';
+import { Button, buttonStyles } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { signOut, useAuthUser } from '@/lib/authStore';
 import { dayAfter, formatDate, plural } from '@/lib/format';
@@ -28,7 +29,16 @@ export default function Overview() {
         {year && <Chip tone="warn">Plan year resets {formatDate(dayAfter(year.end))} · {plural(year.daysToReset, 'day')}</Chip>}
       </header>
 
-      {messaging.status !== 'linked' && (
+      {messaging.status === 'linked' && messaging.mode === 'live' ? (
+        <div className="flex flex-wrap items-center gap-4 rounded-lg bg-brand-soft p-5">
+          <CheckCircle2 aria-hidden className="size-6 text-brand" />
+          <div className="min-w-[220px] flex-1">
+            <p className="t-body-strong">Connected on WhatsApp</p>
+            <p className="t-small text-ink-muted">Your account is tied to {messaging.maskedPhone}, the number you signed in with. Message Floss from that number and the conversation shows up in Chat, under History.</p>
+          </div>
+          <Link to="/app/chat" className={buttonStyles({ variant: 'secondary' })}>Open chat</Link>
+        </div>
+      ) : messaging.status !== 'linked' && (
         <div className="flex flex-wrap items-center gap-4 rounded-lg bg-brand-soft p-5">
           <MessageSquare aria-hidden className="size-6 text-brand" />
           <div className="min-w-[220px] flex-1">
