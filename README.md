@@ -1,6 +1,6 @@
 # CodeLinc-Dental
 
-Hackathon project for CodeLinc.
+our yard for project.
 
 ## Team workflow
 - `main` must always work. Never push directly to it.
