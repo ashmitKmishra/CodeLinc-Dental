@@ -23,7 +23,7 @@ import re
 import ssl
 import traceback
 import uuid
-from datetime import timezone
+from datetime import date, timezone
 
 import boto3
 import pg8000.native
@@ -55,12 +55,17 @@ Memory:
 - This is one continuing chat. Earlier messages are real context: remember what the patient told you (who needs which treatment, which hospital
   they prefer) and use it. A short follow-up such as "what about out of network?" or "and for my son?" continues the topic of the previous
   question. Never ask the patient to repeat something they already said.
-- PLAN HOLDER AND FAMILY says who is on the plan. The treatment rows are the plan holder's estimates. If the patient asks about a family
-  member, give the same rows as a starting point, say plainly that these are the plan holder's estimates and that a family member's cost can
-  differ, and suggest confirming with the hospital.
+- PLAN HOLDER AND FAMILY says who is on the plan, with ages and member numbers. The spouse and children are priced exactly the same as the
+  plan holder: for any family member quote the same rows, naming that person. Do not say their prices may differ.
+
+You look after the wellbeing and the wallet of the employee and their family. When BENEFIT NOTES are present they come from the plan document
+and override the rows: explain any limit plainly, give the corrected amounts exactly as written, and offer the practical options listed there.
+Never invent plan rules beyond BENEFIT NOTES. Anything that changes how care is delivered or billed is for the dentist to decide: say "ask the
+dentist or orthodontist whether it is clinically sound", never push the family toward it.
 
 Answer ONLY from the TREATMENT ROWS provided. Rules:
-- Quote dollar amounts exactly as written in the rows. Never calculate, round, add, or estimate any amount.
+- Quote dollar amounts exactly as written in the TREATMENT ROWS or BENEFIT NOTES. Never calculate, subtract, round, add, or estimate any amount.
+  If a figure you would like is not written there, do not state it.
 - Put every retrieved figure and hospital name in markdown bold, like **$2686.40** and **Duke University Hospital**. Use no other markdown.
 - Say clearly which option is in-network, out-of-network, or cash, and name the recommended hospital for each.
 - The phone number inside the rows is the patient's own number. Never tell the patient to call it.
@@ -68,10 +73,17 @@ Answer ONLY from the TREATMENT ROWS provided. Rules:
 - Confirm with the hospital: whenever you cannot answer from the rows (a price is not available or needs manual verification, the question is
   about a treatment, hospital or person the rows do not cover, or it is a family member's cost), never guess. Tell the patient to confirm the
   price with the hospital itself. Choose the most relevant hospital from HOSPITAL CONTACTS (the one the rows name for that treatment,
-  otherwise the first listed). If it has an email, tell them to email it, with the email in bold, and give its phone number too. If it lists no
+  otherwise the first listed; use that hospital's own entry only and never mix details between hospitals). If it has an email, tell them to email it, with the email in bold, and give its phone number too. If it lists no
   email, say it publishes no email for price questions and give its phone number and website. Copy contact details exactly as written in
   HOSPITAL CONTACTS; never invent or change an email, phone number or web address. Suggest what to ask, for example the price of the
   treatment with their insurance.
+- Offer to write it for them: right after the contact details, volunteer help in one short sentence, such as "I can draft that email for you
+  if you'd like." If the hospital has no email, offer to draft a short message or a list of questions for the call instead.
+- Drafting: when the patient says yes or asks you to write the email (or message), write it ready to send. Start with "To:" (the hospital's
+  email from HOSPITAL CONTACTS) and "Subject:", then a short, polite body. Name the plan holder, the insurer, the treatment, and exactly what
+  to confirm (for example the cash price, or the in-network price). Include "Member ID:" with the member number of the person the treatment is for,
+  copied from PLAN HOLDER AND FAMILY. Sign it with the plan holder's name. Use square-bracket placeholders for anything else you do not know,
+  such as [date of birth] or [your phone number]; never invent details and never include the patient's own phone number or any dollar amount. Add one line after the draft saying to fill in the brackets before sending.
 - ALWAYS end with exactly one closing question, worded "Would you also be interested in something similar to be checked, such as <one check>?",
   where <one check> comes from the OTHER CHECKS list (prefer one not already discussed). Put no dollar amounts in it.
 Keep it short."""
@@ -103,8 +115,8 @@ def _amounts(text):
 
 
 def _user_json(row):
-    phone, name, birth_date, employer, insurance, family = row
-    return {"phone": phone, "name": name, "birthDate": birth_date.isoformat(), "employer": employer, "insurance": insurance,
+    phone, name, birth_date, member_number, employer, insurance, family = row
+    return {"phone": phone, "name": name, "birthDate": birth_date.isoformat(), "memberNumber": member_number, "employer": employer, "insurance": insurance,
             "family": json.loads(family) if isinstance(family, str) else family}
 
 
@@ -131,14 +143,72 @@ def _token_phone(conn, event):
 def _retrieve(conn, phone, query):
     vec = "[" + ",".join(f"{x:.7f}" for x in _embed(query)) + "]"
     rows = conn.run(
-        "SELECT disease, doc, in_network_hospital, out_of_network_hospital, embedding <=> CAST(:v AS vector) AS dist "
+        "SELECT disease, doc, in_network_hospital, out_of_network_hospital, cash_cost, embedding <=> CAST(:v AS vector) AS dist "
         "FROM patient_treatment_embeddings WHERE phone = :p ORDER BY dist LIMIT :k", v=vec, p=phone, k=TOP_K)
-    return [{"disease": r[0], "doc": r[1], "hospitals": [h for h in (r[2], r[3]) if h], "distance": float(r[4])} for r in rows]
+    return [{"disease": r[0], "doc": r[1], "hospitals": [h for h in (r[2], r[3]) if h], "cash": r[4], "distance": float(r[5])} for r in rows]
+
+
+# Lincoln Financial group dental terms (packages/contracts/src/plans.ts, from the plan PDF) and how the stored estimates were built
+# (scripts/build_patient_treatment_vectors.py). All four people are on this plan.
+ANNUAL_MAX = 1500.00            # per person per plan year; covers preventive, basic and major work; resets every January 1
+ORTHO_MAX = 1500.00             # orthodontics: separate, per child under 19, LIFETIME, so it never restarts
+ORTHO_AGE_LIMIT = 19
+ORTHO_LIMIT_RESETS_YEARLY = False   # set True only if the real policy's orthodontic limit restarts each plan year
+ALLOWED_PCT = 0.8               # allowed amount = 80% of the cash price
+PREDETERMINATION_OVER = 300
+TREATMENTS = {                  # disease -> (class, share the plan pays of the allowed amount)
+    "braces/orthodontics": ("ortho", 0.5), "teeth cleaning": ("preventive", 1.0), "cavity/dental filling": ("basic", 0.8),
+    "gum sensitivity": ("basic", 0.8), "impacted wisdom teeth": ("major", 0.5),
+}
+
+
+def _benefit_notes(rows, today):
+    """Plan-limit facts for the best-matching treatment, computed here so the model never does arithmetic."""
+    notes = []
+    days_left = (date(today.year, 12, 31) - today).days
+    top = rows[0]
+    cls, cov = TREATMENTS.get(top["disease"], (None, None))
+    try:
+        cash = float(top["cash"])
+    except (TypeError, ValueError):
+        cash = None
+    if cls and cash:
+        allowed = cash * ALLOWED_PCT
+        share = round(allowed * cov, 2)
+        if cls == "ortho":
+            notes.append(f"Braces under this Lincoln plan: it pays {cov * 100:.0f}% of the allowed amount, up to a ${ORTHO_MAX:.2f} orthodontic maximum for each "
+                         f"child under {ORTHO_AGE_LIMIT}. The plan summary lists no orthodontic benefit for adults, so for a spouse or the plan holder it is worth "
+                         f"asking Lincoln to confirm before booking. If no adult benefit applies, an adult pays the full cash price of ${cash:.2f}, and the "
+                         f"corrected totals below apply to a child.")
+            if not ORTHO_LIMIT_RESETS_YEARLY:
+                notes.append(f"That ${ORTHO_MAX:.2f} is a LIFETIME maximum, separate from the ${ANNUAL_MAX:.2f} annual maximum, and it does not restart in January, "
+                             f"so splitting braces across plan years does not unlock more benefit.")
+            if share > ORTHO_MAX:
+                notes.append(f"The plan share for braces would be ${share:.2f}, which is over the ${ORTHO_MAX:.2f} limit, so the plan would pay only ${ORTHO_MAX:.2f}. "
+                             f"CORRECTED totals for the family: ${allowed - ORTHO_MAX:.2f} in-network or ${cash - ORTHO_MAX:.2f} out-of-network (cash without insurance stays "
+                             f"${cash:.2f}). Quote these corrected totals instead of the in-network and out-of-network braces figures in the rows, which ignore the limit. "
+                             f"Do not calculate or state any other amount.")
+                if ORTHO_LIMIT_RESETS_YEARLY:
+                    notes.append(f"Phasing: if the orthodontist agrees it is clinically sound, the upper arch could be done in December and the lower arch in January, "
+                                 f"after the limit restarts, so the plan could pay up to ${ORTHO_MAX:.2f} in each plan year.")
+                else:
+                    notes.append(f"Ways to ease the cost: ask the orthodontist for a predetermination of benefits (Lincoln recommends one when you expect to pay more than "
+                                 f"${PREDETERMINATION_OVER}) and for a monthly payment plan, check whether an FSA or HSA can cover the balance, and compare the in-network and "
+                                 f"out-of-network quotes.")
+        elif share > ANNUAL_MAX:
+            notes.append(f"The plan pays at most ${ANNUAL_MAX:.2f} per person each plan year (calendar year, restarting January 1), but the plan share for this treatment "
+                         f"would be ${share:.2f}. If the dentist agrees the treatment can be done in phases, the first phase before December 31 and the rest after "
+                         f"January 1 would let the plan pay ${ANNUAL_MAX:.2f} now and about ${share - ANNUAL_MAX:.2f} in the new plan year.")
+    if cls in ("preventive", "basic", "major") and days_left <= 120:
+        notes.append(f"The ${ANNUAL_MAX:.2f} annual maximum restarts on January 1 ({days_left} days from now) and unused annual benefit is lost, so covered preventive, basic "
+                     f"or major work is best scheduled before December 31.")
+    return notes
 
 
 def _contacts(conn, rows):
-    """Contact details for the hospitals named in the rows, in the order the rows name them."""
-    names = list(dict.fromkeys(h for r in rows for h in r["hospitals"]))
+    """Contact details for the two hospitals named on the best-matching row only (in-network first). Handing the model just these keeps it
+    from attaching one hospital's phone number or email to another."""
+    names = list(dict.fromkeys(rows[0]["hospitals"])) if rows else []
     if not names:
         return []
     found = {n: (e, ph, u) for n, e, ph, u in conn.run(
@@ -179,9 +249,14 @@ def _answer(conn, phone, conversation_id, question):
     if not rows:
         return "I don't have treatment estimates on file for you yet.", [], False
     contacts = _contacts(conn, rows)
-    who = conn.run("SELECT full_name, insurance, family FROM users WHERE phone = :p", p=phone)[0]
+    who = conn.run("SELECT full_name, insurance, family, member_number, birth_date FROM users WHERE phone = :p", p=phone)[0]
     family = who[2] if isinstance(who[2], list) else json.loads(who[2])
-    family_text = ", ".join(f"{f['firstName']} {f['lastName']} ({f['relationship']})" for f in family) or "none"
+    today = date.today()
+    age = lambda iso: today.year - int(iso[:4]) - ((today.month, today.day) < (int(iso[5:7]), int(iso[8:10])))
+    family_text = "; ".join(f"{f['firstName']} {f['lastName']} ({f['relationship']}, age {age(f['birthDate'])}, member number {f.get('memberNumber', 'n/a')})" for f in family) or "none"
+    holder_text = f"{who[0]} (plan holder, age {age(who[4].isoformat())}, member number {who[3] or 'n/a'})"
+    notes = _benefit_notes(rows, today)
+    notes_text = "\n".join(f"- {n}" for n in notes)
     messages = []
     for role, text in history:  # Converse needs alternating roles starting with user
         if messages and messages[-1]["role"] == role:
@@ -192,22 +267,26 @@ def _answer(conn, phone, conversation_id, question):
         messages.pop()
     context_text = "\n".join(f"- {r['doc']}" for r in rows)
     contact_lines = "\n".join(
-        f"- {c['name']}: email {c['email'] or 'none published'}; phone {c['phone'] or 'none'}; website {c['url']}" for c in contacts) or "- none"
+        f"- {c['name']} ({'in-network' if i == 0 else 'out-of-network'} option for {rows[0]['disease']}): "
+        f"email {c['email'] or 'none published'}; phone {c['phone'] or 'none'}; website {c['url']}" for i, c in enumerate(contacts)) or "- none"
     others = ", ".join(r["disease"] for r in rows[1:]) or "none"
     messages.append({"role": "user", "content": [{"text": (
-        f"PLAN HOLDER AND FAMILY: {who[0]}, insurance {who[1]}. Family on the plan: {family_text}.\n\n"
-        f"TREATMENT ROWS:\n{context_text}\n\nHOSPITAL CONTACTS (use only these):\n{contact_lines}\n\n"
+        f"PLAN HOLDER AND FAMILY: {holder_text}, insurance {who[1]}. Family on the plan: {family_text}.\n\n"
+        f"TREATMENT ROWS:\n{context_text}\n\n" + (f"BENEFIT NOTES (computed from the plan document):\n{notes_text}\n\n" if notes else "") +
+        f"HOSPITAL CONTACTS (use only these):\n{contact_lines}\n\n"
         f"OTHER CHECKS you can offer: {others}\n\nQUESTION: {question}")}]})
     resp = bedrock.converse(modelId=MODEL_ID, system=[{"text": SYSTEM}], messages=messages,
-                            inferenceConfig={"maxTokens": 600, "temperature": 0.2})
+                            inferenceConfig={"maxTokens": 900, "temperature": 0.1})
     answer = _clean(resp["output"]["message"]["content"][0]["text"])
-    bad_money = _amounts(answer) - _amounts(context_text)
+    bad_money = _amounts(answer) - _amounts(context_text + "\n" + notes_text)
     bad_contact = _bad_contacts(answer, contacts)
     replaced = bool(bad_money or bad_contact)
+    if replaced:
+        print("guardrail replaced answer", {"amounts_not_in_rows": sorted(bad_money), "contacts_not_stored": sorted(bad_contact)})
     if replaced:  # numbers and contact details must come from the stored rows, never from the model
         answer = ("I couldn't safely phrase that answer, so here are the matching estimates exactly as recorded: "
                   + " ".join(r["doc"] for r in rows[:2])
-                  + (f" To confirm the price, {_contact_text(contacts[0])}." if contacts else "")
+                  + (f" To confirm the price, {_contact_text(contacts[0])}. I can draft that message for you if you'd like." if contacts else "")
                   + " Would you also be interested in something similar to be checked?")
     if "similar to be checked" not in answer.lower():  # the closing offer is guaranteed, whatever the model did
         fresh = [r["disease"] for r in rows[1:] if r["disease"].split("/")[0].lower() not in answer.lower()] or [r["disease"] for r in rows[1:]]
@@ -277,7 +356,7 @@ def _list_conversations(conn, phone):
 
 
 def _me(conn, phone):
-    rows = conn.run("SELECT phone, full_name, birth_date, employer, insurance, family FROM users WHERE phone = :p", p=phone)
+    rows = conn.run("SELECT phone, full_name, birth_date, member_number, employer, insurance, family FROM users WHERE phone = :p", p=phone)
     return 200, {"user": _user_json(rows[0])}
 
 

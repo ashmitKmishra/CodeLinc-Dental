@@ -61,6 +61,12 @@
               },
               "birthDate": {
                 "type": "string"
+              },
+              "memberNumber": {
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "required": [
