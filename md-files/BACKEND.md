@@ -11,6 +11,21 @@ Read `md-files/CONTEXT.md` first. This file defines the **structure** every back
 | §7–8 (engine, agent) | C |
 | §9–11 (Twilio SMS, email, scheduled jobs) | D |
 
+
+> **v1 scope (Oct 3, from the team lead).** The frontend uses only what's listed here. Everything else in this file (office outreach email, provider network re-verification, memory, curiosity check-ins, demo clock) is **not built in the UI and not needed for v1**. Build those later only if the team asks.
+>
+> The authoritative JSON shapes are in **`packages/contracts`** (`src/schemas.ts`, zod). `npm run schema -w @floss/contracts` writes JSON Schema files to `packages/contracts/schema/` for non-TypeScript backends. The frontend's live adapter validates every response against these schemas, so a drifting backend fails loudly.
+>
+> | Endpoint | Returns / does |
+> | --- | --- |
+> | `GET /v1/snapshot` | `Snapshot`: user, household members, **`plan` (PlanSummary)**, per-member `usage`, recent `visits`, `reminders`, `preferences`, latest `messages`, `pendingActions`, `messaging`, `ai` |
+> | *(not called by the frontend)* | `/v1/procedures`, `/v1/estimates`, `/v1/sequences` were for the removed Care page. Estimates and best-order answers now reach the user only through chat: `Message.cards` (`estimate`, `sequence`) from `POST /v1/turns`. Keep the endpoints if the chat tools use them internally. |
+> | `POST /v1/turns`, `GET /v1/turns/{id}`, `GET /v1/messages` | Chat (async turn, polled) and full history |
+> | `POST /v1/actions/{id}/confirm`, `…/cancel` | `record_visit`, `email_transcript` |
+> | `POST /v1/messaging/link-code`, `DELETE /v1/messaging/link` | Text linking (Twilio) |
+> | `PUT /v1/preferences` | `Preferences` (reminders on/off, days before plan year end) |
+> | `POST /v1/transcripts` | Emails the chat transcript to the user. Returns `{ sentTo }` |
+
 ---
 
 ## 1. Non-negotiable principles
@@ -527,3 +542,73 @@ All jobs are idempotent, use the demo clock when it is set, and can be triggered
     - Replaying any webhook or confirm creates no duplicates.
     - A stale confirm returns a new preview.
     - Every delivery status shown is real.
+
+
+## 15. Plan data from the carrier PDFs (SQL shape)
+
+The backend parses each employer's plan summary PDF once and stores it **normalized**. `GET /v1/snapshot` joins these tables into one `PlanSummary` JSON (see `packages/contracts/src/schemas.ts`). Six real examples from five carriers are in `packages/contracts/src/plans.ts` and are the test fixtures.
+
+**What the five PDFs taught us** (so the schema doesn't break on the next carrier):
+
+| Carrier | What's different |
+| --- | --- |
+| Lincoln | One network ("any dentist", usual and customary amounts). Preventive counts toward the annual max. Ortho is child-only with a *lifetime* max. Deductible not stated for ortho. |
+| Delta Dental PPO POS | **Three tiers** (PPO dentist, Premier dentist, nonparticipating) with different deductibles; annual max *excludes* ortho; frequency limits listed. |
+| Aetna Gold | Same percentages in and out of network, but out-of-network pays on the 70th percentile of prevailing charges. Major care is 80%. Deductible applies to basic and major only. |
+| MetLife Federal | **Two plan options**, in/out-of-network rates, class names differ (their "Basic" is preventive); root canal is *major*; High option has **no annual max**; ortho max differs for child and adult. |
+| Cigna 3000/100 | Lists what *you pay* (so plan rate = 100% − your share); deductible applies to preventive too; **no orthodontics**. |
+
+**Rules for the parser:**
+
+1. `NULL` always means "not stated in the document". Never write 0 for something the PDF doesn't say. The UI shows "not listed in your plan summary" and the estimate adds an assumption.
+2. Keep the carrier's own class name in `carrier_label`; map to one of `preventive | basic | major | ortho`.
+3. Record the PDF page of every fact (`source_page`). The UI shows a "Plan PDF · p.N" chip on every rule and every estimate line that came from the plan.
+4. A procedure the plan classes unusually goes in `plan_procedure_class_overrides`.
+5. Money is integer cents; rates are basis points.
+
+```sql
+create table plans (
+  id text primary key, carrier text not null, name text not null,
+  plan_year_start_month smallint not null, plan_year_start_day smallint not null, plan_year_label text not null,
+  source_file text not null, source_pages int not null,
+  annual_max_cents int,                         -- null = unlimited
+  annual_max_classes text[] not null,           -- which classes count toward it
+  ortho_type text not null check (ortho_type in ('lifetime','annual','none')),
+  ortho_child_cents int, ortho_adult_cents int, ortho_child_age_limit smallint, ortho_adults_covered boolean not null,
+  dependent_age_limit smallint, dependent_student_age smallint,
+  is_synthetic boolean not null default false
+);
+create table plan_tiers (          -- in network / out of network / carrier tiers / "any dentist"
+  plan_id text references plans, id text, label text not null,
+  kind text not null check (kind in ('in_network','out_of_network','any')),
+  allowed_basis text not null check (allowed_basis in ('contracted','usual_customary','percentile','nonparticipating_fee','unknown')),
+  allowed_note text, primary key (plan_id, id)
+);
+create table plan_class_rules (
+  plan_id text, tier_id text, class text check (class in ('preventive','basic','major','ortho')),
+  carrier_label text, examples text,
+  insurer_rate_bps smallint,                    -- null = not covered
+  deductible_applies boolean,                   -- null = not stated
+  counts_toward_annual_max boolean not null, source_page smallint,
+  primary key (plan_id, tier_id, class), foreign key (plan_id, tier_id) references plan_tiers
+);
+create table plan_deductibles (plan_id text, tier_id text, individual_cents int, family_cents int, source_page smallint, primary key (plan_id, tier_id));
+create table plan_frequency_limits (plan_id text, key text, label text, max_count int, period text, months int, age_under smallint, note text, source_page smallint, primary key (plan_id, key));
+create table plan_waiting_periods (plan_id text, class text, months int not null, source_page smallint, primary key (plan_id, class));
+create table plan_procedure_class_overrides (plan_id text, procedure_code text, class text not null, primary key (plan_id, procedure_code));
+create table plan_notes (plan_id text, title text, plain text not null, source_page smallint);
+create table procedures (code text primary key, name text, plain_name text, description text, default_class text not null, frequency_key text);
+
+-- household data (per user)
+create table members (id text primary key, household_id text, first_name text, relationship text, birth_date date);
+create table visits (
+  id text primary key, member_id text references members, date date not null, procedure_code text not null,
+  billed_cents int not null, plan_paid_cents int not null, you_paid_cents int not null, deductible_applied_cents int not null,
+  source text not null check (source in ('app','sms')), reverses_visit_id text
+);
+-- usage is DERIVED from visits (sum plan_paid_cents in the plan year, per member). Never store a running total.
+```
+
+**Usage derivation** (what `MemberUsage` means): annual max used = sum of `plan_paid_cents` for the member's non-ortho visits in the current plan year; deductible met = sum of `deductible_applied_cents` in the plan year (capped at the plan deductible); ortho lifetime used = sum of ortho `plan_paid_cents` across all years; frequency used = visit count per `frequency_key` in the plan year.
+
+**Estimates:** order of operations is unchanged from §7. The frontend mock in `apps/web/src/lib/api/mock/engine.ts` is a stand-in with tests (`engine.test.ts`) worked out by hand from the Lincoln PDF; use those test cases as the first acceptance tests for the real engine.

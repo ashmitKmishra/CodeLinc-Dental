@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "memberId": {
+      "type": "string"
+    },
+    "tierId": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string"
+    },
+    "items": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "procedureCode": {
+            "type": "string"
+          },
+          "quoteCents": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "allowedCents": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "procedureCode",
+          "quoteCents"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "memberId",
+    "tierId",
+    "date",
+    "items"
+  ],
+  "additionalProperties": false
+}

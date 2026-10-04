@@ -29,3 +29,7 @@ CLAUDE.md
 
 # Agent skills (restore with: npx skills experimental_install)
 .claude/skills/
+*.tsbuildinfo
+.env.local
+coverage/
+.vite/

@@ -11,6 +11,14 @@ It replaces the earlier ChatGPT pack (`product-brief.md`, `build-and-deploy.md`,
 
 ---
 
+> **Update, Oct 3 evening: read `BUILD-BRIEF.md` first. It overrides this file where they differ.**
+>
+> - **No PDF upload in the product.** The employee's plan is already on file; the backend parses carrier PDFs.
+> - **Real plan data.** Sample plans come from five real carrier summaries (Lincoln, Delta Dental, Aetna, MetLife, Cigna). The numbers in §6 below were invented earlier and are **replaced** by the demo script there.
+> - **Built in v1:** annual maximum tracking per family member, the plan in plain words (with PDF page sources), cost breakdown, in/out-of-network compare, best order across the plan year, reminders, chat (app + text) with emailed transcript.
+> - **Not built in v1** (still described below, deliberately not in the UI): office outreach emails and anything about appointments, provider network re-verification, memory, curiosity check-ins.
+
+
 ## 1. One paragraph
 
 **Floss is a family dental-benefits assistant you can text.** A plan holder tells it, by text message or in the web app, what the dentist or orthodontist recommended for anyone in the family. Floss answers in dollars:
@@ -120,52 +128,18 @@ One agent serves every channel (app chat, SMS, inbound email summaries). Each tu
 - The `userId` is never accepted from the model.
 - Off-topic requests get a polite redirect.
 
-## 6. The demo (synthetic, numbers verified by hand)
+## 6. The demo (real plan, sample household)
 
-**Household:** the Riveras.
+Plan: the **Lincoln Group Dental** summary (100% preventive, 80% basic, 50% major, $25 deductible, **$1,500 yearly maximum**, orthodontics for children at 50% with a **$1,500 lifetime maximum**). The household (Jordan, Sam, Maya, Leo) and their past visits are sample data. Dentist prices are whatever the presenter types; Floss never supplies one.
 
-- Jordan (subscriber, 38), Sam (spouse, 37), Maya (14), Leo (8).
-- Providers: Maple Family Dental (general) and Bright Smiles Orthodontics (Dr. Ana Patel). Both are in network at the start of the demo.
-
-**Sample Family PPO** (synthetic, labeled *not a real Lincoln plan*):
-
-- Calendar plan year.
-- Annual max $1,500 per person.
-- Deductible $50 per person, $150 family cap.
-- Preventive 100%, exempt from both the deductible and the max; cleanings 2 per plan year.
-- Basic 80%; major 50%.
-- Orthodontics 50% for members under 19, no deductible, **counts toward the member's annual max** (demo rule).
-
-**2026 usage at demo time:**
-
-- Jordan $1,200 used ($300 left, deductible met).
-- Sam $0.
-- Maya $0 used ($1,500 left), 2 of 2 cleanings.
-- Leo $0 used, **1 of 2 cleanings**.
-
-**Story:**
-
-1. **Text:** "Maya's orthodontist says she needs braces, upper and lower, $2,400 each. What will we owe?"
-    - Both in December 2026: plan pays min(50% × $4,800, $1,500 left) = **$1,500**; family pays **$3,300**.
-    - Floss asks: "Did Dr. Patel say the lower arch can start in January?" (curiosity).
-2. **Reply "yes".** The timeline shows **upper braces December 2026** (plan $1,200, family $1,200) and **lower braces January 2027** after the reset (plan $1,200 from the new max, family $1,200).
-    - Total family **$2,400**; difference **$900**.
-    - Assumes the same plan next year, and says so.
-3. **Floss offers to email Bright Smiles** for a December upper / January lower appointment and written price confirmation. The user approves, the email lands in the office's demo inbox, and the follow-up is visibly scheduled.
-4. **Network re-verification.**
-    - Run the verifier with the demo toggle that marks Bright Smiles out of network. Allowed $2,000 per arch, billed $2,400.
-    - Estimate re-priced: each arch plan pays $1,000, family pays $1,400 → **$2,800** (+$400). The user is notified with old → new.
-    - Toggle back.
-5. **Family nudge** (reminder evaluator with the demo clock): "Leo has 1 covered cleaning left in 2026 — want me to ask Maple Family Dental for a December slot?"
-6. **Sync:** text "Leo had his cleaning today" → preview → `CONFIRM K7Q2` → Leo shows 2 of 2 cleanings (actual) on the dashboard within about 3 s, tagged *Text*.
-7. **Transcript:** tap "Email transcript" → it arrives. Show *What Floss remembers* (Dr. Patel, Maya's ortho plan).
-
-Engine regression fixtures from the earlier pack stay valid: Jordan's filling ($200) + crown ($1,200) with $300 left → $1,100 same year vs $665 split (difference $435).
-
-**Open points:**
-
-- We read judge comment 2 as dental braces split by arch across the plan-year reset.
-- Real plans often use a *lifetime* ortho max and case-fee billing. Our engine supports `orthoMaxType: "annual" | "lifetime"`. The demo uses the annual sample rule and says so on screen.
+1. **Landing:** scroll the hero (the app tilts flat as you scroll), see the texting section and "How Floss works", then **Create account**. The plan is already on file.
+2. **Overview:** annual maximum used and left for each person; the plan in plain words, each rule citing its PDF page.
+3. **Care:** pick Maya, add *Crown* with a typed quote, add *Filling*, **See what I'd owe**. Open a line to see why. Mark an item "can wait" and **Find the best order**: when this year's maximum isn't short, the honest answer is "No savings".
+4. **Network:** Settings → Demo controls → switch to *Delta Dental* or *Aetna*; in Care, the same procedure now shows in-network vs out-of-network.
+5. **The judge's braces example:** Maya + *Braces* (Lincoln): covered up to the $1,500 **lifetime** maximum. Splitting upper and lower braces across December and January changes nothing, because that maximum doesn't reset. Floss says so. (To show a split that does save, use a crown or root canal when this year's maximum is nearly used.)
+6. **Chat:** "What will a crown cost me?" Floss asks for the quote. Reply "He quoted $1,200" and get the breakdown. Then "Leo had a filling, the bill was $180": confirm, and the Overview meter moves.
+7. **Transcript:** **Email transcript** (app or text).
+8. **Texting and reminders:** Settings → connect texting (simulated in the demo), choose reminder timing.
 
 ## 7. Architecture (shape is fixed; the stack is replaceable)
 
