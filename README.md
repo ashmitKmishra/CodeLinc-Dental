@@ -14,7 +14,7 @@ Demo video: _link goes here_
 
 A dental plan is written in insurance language: deductible, coinsurance, annual maximum, frequency limit, waiting period, network. Most employees cannot turn that into a dollar figure for a crown or braces, so they overpay, skip care, or let benefits expire on the reset date.
 
-Floss answers the question the employee actually has ("what will this cost me, and when should I do it?") in a web app and, next, on WhatsApp. Every chat is saved, and the transcript can be emailed.
+Floss answers the question the employee actually has ("what will this cost me, and when should I do it?") in a web app, and a Twilio texting bridge is in progress. Every chat is saved, and the transcript can be emailed.
 
 The design uses RAG over the patient's own data, conversation context, a REST API, Cognito authentication, multilingual answers, and WhatsApp's end-to-end encryption.
 
@@ -28,16 +28,18 @@ The editable source is [`architecture.drawio`](docs/architecture/architecture.dr
 
 1. The plan holder signs in with Amazon Cognito and asks in the web app. WhatsApp messages will arrive through a signed Twilio webhook on the same API.
 2. API Gateway checks the JWT (or Twilio's signature) and passes the request to the API Lambda. Each call has a limit of about 29 seconds.
-3. The Lambda takes the phone number from the verified token, never from the request. It loads the last 6 messages of the conversation as context and searches pgvector for rows that belong to that phone number only.
-4. Bedrock does two jobs: Titan Text Embeddings v2 embeds the question for the search, and Claude Haiku 4.5 explains the rows. If the reply contains a dollar amount that is not in the rows, the Lambda returns a safe fallback instead.
-5. The Lambda saves both messages to the chat ledger and returns the reply. The web app shows it, or Twilio sends it back on WhatsApp.
+3. The Lambda takes the phone number from the verified token, never from the request. It replays the last 20 messages of the conversation as context. It searches pgvector for that phone number's rows, using the last two earlier questions plus the new one, so a short follow-up such as "and for my son?" keeps its topic.
+4. Bedrock does three jobs in two steps. A first Claude Haiku 4.5 call only picks the person, the treatments (up to two) and what the user wants, through a strict tool schema. Code then looks up the stored estimates and does the arithmetic. A second call writes the reply from those facts only. Titan Text Embeddings v2 embeds the question for the search.
+5. Every dollar figure, email address, phone number and link in the reply must be one of the facts. If one is not, the writer gets one retry that names it, and after that code writes a short reply. The Lambda saves both messages to the chat ledger and returns the reply.
+
+Steps 1 to 4 are marked on the diagram.
 
 Money math, such as what the plan pays for a crown, belongs in the cost engine in integer cents. The model explains results and never adds numbers.
 
 ### Key ideas
 
-- **RAG.** Retrieval-augmented generation. The model answers from rows retrieved from the database for that patient, so prices come from data and not from the model's memory.
-- **Context.** Each turn carries the last 6 messages of the conversation, so "what about braces?" after a question about a filling means something.
+- **RAG.** Retrieval-augmented generation. The model answers from rows retrieved from the database for that patient, plus facts that code builds from them, so prices come from data and not from the model's memory.
+- **Context.** Each turn replays the last 20 messages of the conversation, and the search uses the earlier questions too, so "what about braces?" after a question about a filling means something.
 - **REST API.** One versioned `/v1` REST-style HTTP API on Amazon API Gateway serves the web app and, next, WhatsApp. Its shapes are defined as zod schemas in `packages/contracts`.
 - **Cognito authentication.** Amazon Cognito signs people in with their mobile number and a password. The accounts are created by the team. API Gateway validates the Cognito ID token on every app route.
 - **Multilingual.** Claude Haiku 4.5 reads and writes many languages. Titan Text Embeddings v2 supports 100+ languages but is tuned for English, so the plan is to translate the question to English before the search and answer in the user's language.
@@ -51,6 +53,7 @@ Money math, such as what the plan pays for a crown, belongs in the cost engine i
 | WhatsApp | Twilio's `X-Twilio-Signature` verified on the webhook, and messages accepted only from a number that has an account (planned) |
 | Data access | The phone comes from the token. Every vector search is filtered by it, so a patient reads only their own rows. |
 | Database | IAM authentication (no stored password), a least-privilege `api_app` role, encrypted at rest, inside a VPC |
+| Replies | Every dollar figure, email address, phone number and link in an answer must match the stored facts, or the answer is replaced |
 | Model access | Bedrock is reached through a private VPC endpoint |
 | In transit | TLS 1.2 or newer to API Gateway, Cognito and the database. The site is served over HTTPS with HSTS and a content security policy. |
 
@@ -58,17 +61,18 @@ Money math, such as what the plan pays for a crown, belongs in the cost engine i
 
 | Component | Status | Notes |
 | --- | --- | --- |
-| Web app (`apps/web`) | Live | Hosted on CloudFront and a private S3 bucket. Sign-in, chat and chat history use the real API. Plan rules and usage on the Overview page are still sample data. The same code runs locally on sample data. |
+| Web app (`apps/web`) | Live | Hosted on CloudFront and a private S3 bucket. Sign-in, chat and chat history use the real API, and the family cards show member IDs. Plan rules and usage on the Overview page are still sample data. The same code runs locally on sample data. |
 | API contract (`packages/contracts`) | Built | zod schemas, JSON Schema export, and fixtures for six plans from five carriers' PDFs. |
 | API Gateway and API Lambda (`backend/rag`) | Live | HTTP API with a JWT authorizer, throttled to 10 requests per second. Routes: `GET /v1/me`, `GET /v1/conversations`, `GET /v1/messages`, `POST /v1/turns`, `GET /v1/turns/{id}`. |
 | Cognito | Live | Mobile number and password. Accounts are created by the team. There is no sign-up. |
-| Chat history | Live | `users` and `chat_messages` tables, threads with a "New chat" option, last 6 messages sent as context. |
-| RAG | Live, tested | Braces for one patient returns $2686.40 exactly. A filling with no price on file returns "manual verification needed" and no number. |
+| Chat history | Live | `users` (with family and member numbers) and `chat_messages` tables, threads with a "New chat" option, last 20 messages replayed as context. |
+| Chat answers (`backend/rag/advisor.py`) | Live, tested | A picker call, code-built facts, a writer call and a figure check, as in step 4 above. Offline tests: `python3 -m unittest backend/rag/test_advisor.py`. A filling with no price on file says a manual check is needed and gives no number. |
 | Bedrock | Live | Titan Text Embeddings v2 and Claude Haiku 4.5, reached over a VPC endpoint. |
 | Postgres + pgvector on RDS (`db/`, `scripts/`) | Live | 1024-dimension vectors, cosine HNSW index. 20 treatment rows (4 people, 5 conditions), plus tables for patients, 30 NC hospitals and 30 NC dental costs. Plan PDF chunks are not loaded yet. |
-| Cost engine | Stand-in only | A tested calculator inside the web app's sample-data mode (15 tests). The backend version is not written. |
+| Hospital contacts | Live | 30 hospitals with phone, website and, where the hospital publishes one, an email. Floss points a patient to the right hospital to confirm a price. |
+| Cost engine | Partial | In the Lambda, code does the arithmetic for the five stored treatments: savings against out-of-network, and corrected braces totals under the plan's lifetime orthodontic limit. A general plan-rules engine for any procedure is not written. The web app's sample-data mode has its own tested calculator (15 tests). |
 | Plan parsing | Planned | The web app ships the parsed result for six plans. The pipeline that produces it from a PDF is not built. |
-| Twilio WhatsApp | Planned | Nothing sends WhatsApp messages yet, so WhatsApp history is empty. |
+| Twilio texting and WhatsApp | In progress | A Flask webhook that validates Twilio's signature and calls Bedrock is on the `whatsapp-chatbot` branch. It is separate from the API Lambda and keeps its own SQLite history, so nothing sends WhatsApp messages through Floss yet and WhatsApp history is empty. |
 | Multilingual | Planned | The models support it. The Lambda does not detect or translate languages yet. |
 | Phone linking, confirming actions, transcript email | Planned | The API answers "not available yet". SES and SNS are in sandbox in the workshop account. |
 
@@ -109,7 +113,7 @@ Also in the app: a saved chat history with separate threads, and a household wit
 
 1. Open https://d3unrkn8gkr6mk.cloudfront.net and choose **Sign in**.
 2. Enter the mobile number on your plan, with the country code, and your password. Accounts are created by the team, so ask Ashwani for yours.
-3. Open **Chat** and ask `How much are braces in network?`. Use **History** to switch threads or start a **New chat**.
+3. Open **Chat** and ask `How much are braces in network?`, then follow up with `and for my son?`. Use **History** to switch threads or start a **New chat**.
 4. Open **Overview** for your household and the Lincoln sample plan.
 
 If the page has no password box, hard refresh. Troubleshooting and admin steps are in [`md-files/backend-ops.md`](md-files/backend-ops.md).
@@ -166,7 +170,7 @@ npm run typecheck && npm test && npm run build
 | Data | Amazon RDS for Postgres with pgvector, IAM database authentication |
 | Hosting | Amazon CloudFront and S3 |
 | Infrastructure | CloudFormation: `backend/rag/template.yaml` (API) and `infra/web.yaml` (site) |
-| Messaging | Twilio API for WhatsApp (planned) |
+| Messaging | Twilio (bridge in progress on the `whatsapp-chatbot` branch) |
 
 ## Repository map
 
@@ -174,7 +178,7 @@ npm run typecheck && npm test && npm run build
 | --- | --- |
 | `apps/web` | The React app |
 | `packages/contracts` | API contract, plan fixtures, JSON Schema |
-| `backend/rag` | API Lambda handler and CloudFormation template |
+| `backend/rag` | API Lambda handler, the picker and writer pipeline (`advisor.py`), its tests, `deploy.sh` and the CloudFormation template |
 | `infra` | CloudFormation for the website |
 | `db` | SQL for the patients, hospitals, cost, user and chat tables |
 | `scripts` | Table loading, vector building, Cognito user and deploy scripts |
@@ -183,9 +187,9 @@ npm run typecheck && npm test && npm run build
 
 ## Not built yet
 
-- Twilio WhatsApp.
+- Twilio WhatsApp connected to the API. The texting bridge on the `whatsapp-chatbot` branch is not merged and does not use the API Lambda, the database or Cognito.
 - Language detection and translation in the Lambda.
-- The backend cost engine. The treatment rows were computed by a script with simple assumptions (an allowed amount of 80% of the cash price, no deductible, no annual maximum, no orthodontic lifetime cap). The engine will replace them.
+- A general backend cost engine. The stored estimates use a simple allowed amount (80% of the cash price). The advisor corrects braces totals for the lifetime orthodontic limit and warns about the annual maximum, but it covers only the five stored treatments.
 - A pipeline that parses carrier PDFs into the contract's plan format, and an API that serves plan rules and usage. The live Overview page shows the Lincoln sample plan.
 - Linking a phone for texting, confirming actions, and emailing a transcript.
 

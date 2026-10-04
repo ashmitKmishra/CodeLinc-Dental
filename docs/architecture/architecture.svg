@@ -61,20 +61,21 @@
 <text x="624" y="290" font-size="12.5" fill="#4F6468">Contract: packages/contracts</text>
 <text x="624" y="307" font-size="12.5" fill="#4F6468"></text>
 <text x="624" y="324" font-size="12.5" fill="#4F6468">About a 29 s limit per call</text>
-<rect x="610" y="480" width="250" height="170" rx="10" fill="#FFFFFF" stroke="#0A3D42" stroke-width="1.6"/>
+<rect x="610" y="480" width="250" height="190" rx="10" fill="#FFFFFF" stroke="#0A3D42" stroke-width="1.6"/>
 <text x="624" y="506" font-size="15" font-weight="700" fill="#10282D">API Lambda</text>
 <text x="624" y="528" font-size="12.5" fill="#4F6468">Verified phone from the JWT</text>
-<text x="624" y="545" font-size="12.5" fill="#4F6468">Chat ledger; last 6 messages</text>
-<text x="624" y="562" font-size="12.5" fill="#4F6468">go in as context</text>
-<text x="624" y="579" font-size="12.5" fill="#4F6468">Retrieves that phone&#x27;s rows,</text>
-<text x="624" y="596" font-size="12.5" fill="#4F6468">answers in the user&#x27;s language</text>
-<text x="624" y="613" font-size="12.5" fill="#4F6468">Drops any $ not in the rows</text>
-<text x="624" y="630" font-size="12.5" fill="#4F6468">Emails the chat transcript</text>
-<rect x="610" y="690" width="250" height="100" rx="10" fill="#FFFFFF" stroke="#0A3D42" stroke-width="1.6"/>
-<text x="624" y="716" font-size="15" font-weight="700" fill="#10282D">Cost engine</text>
-<text x="624" y="738" font-size="12.5" fill="#4F6468">Integer-cents math from the</text>
-<text x="624" y="755" font-size="12.5" fill="#4F6468">plan rules. The model never</text>
-<text x="624" y="772" font-size="12.5" fill="#4F6468">does arithmetic.</text>
+<text x="624" y="545" font-size="12.5" fill="#4F6468">Replays the last 20 messages</text>
+<text x="624" y="562" font-size="12.5" fill="#4F6468">Picks the person and treatment,</text>
+<text x="624" y="579" font-size="12.5" fill="#4F6468">looks up stored estimates,</text>
+<text x="624" y="596" font-size="12.5" fill="#4F6468">does the math in code</text>
+<text x="624" y="613" font-size="12.5" fill="#4F6468">Writes the reply; drops any $,</text>
+<text x="624" y="630" font-size="12.5" fill="#4F6468">email or phone not in the facts</text>
+<text x="624" y="647" font-size="12.5" fill="#4F6468">Emails the chat transcript</text>
+<rect x="610" y="700" width="250" height="90" rx="10" fill="#FFFFFF" stroke="#0A3D42" stroke-width="1.6"/>
+<text x="624" y="726" font-size="15" font-weight="700" fill="#10282D">Cost engine</text>
+<text x="624" y="748" font-size="12.5" fill="#4F6468">Integer-cents math from the</text>
+<text x="624" y="765" font-size="12.5" fill="#4F6468">plan rules. The model never</text>
+<text x="624" y="782" font-size="12.5" fill="#4F6468">does arithmetic.</text>
 <rect x="940" y="480" width="210" height="110" rx="10" fill="#E4F3EA" stroke="#1F7A4D" stroke-width="1.6"/>
 <text x="954" y="506" font-size="15" font-weight="700" fill="#10282D">Amazon Bedrock</text>
 <text x="954" y="528" font-size="12.5" fill="#4F6468">Titan Text Embeddings v2</text>
@@ -83,9 +84,9 @@
 <rect x="1210" y="460" width="270" height="200" rx="10" fill="#E8EEF9" stroke="#3A5BA0" stroke-width="1.6"/>
 <text x="1224" y="486" font-size="15" font-weight="700" fill="#10282D">Postgres + pgvector</text>
 <text x="1224" y="508" font-size="12.5" fill="#4F6468">Amazon RDS, 1024-dim vectors</text>
-<text x="1224" y="525" font-size="12.5" fill="#4F6468">Users and chat_messages</text>
+<text x="1224" y="525" font-size="12.5" fill="#4F6468">Users, family, chat_messages</text>
 <text x="1224" y="542" font-size="12.5" fill="#4F6468">Treatment rows, hospitals, costs</text>
-<text x="1224" y="559" font-size="12.5" fill="#4F6468">Plan PDF chunks</text>
+<text x="1224" y="559" font-size="12.5" fill="#4F6468">Hospital contacts, plan PDF chunks</text>
 <rect x="1210" y="690" width="270" height="100" rx="10" fill="#E8EEF9" stroke="#3A5BA0" stroke-width="1.6"/>
 <text x="1224" y="716" font-size="15" font-weight="700" fill="#10282D">Plan data</text>
 <text x="1224" y="738" font-size="12.5" fill="#4F6468">Carrier PDFs in Amazon S3,</text>
@@ -116,7 +117,7 @@
 <line x1="860" y1="625" x2="1210" y2="625" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)" marker-start="url(#ar)"/>
 <text x="1035.0" y="608.0" font-size="11.5" font-weight="600" text-anchor="middle" fill="#0A3D42" stroke="#F7FAFA" stroke-width="4" paint-order="stroke">context, vector search</text>
 <rect x="1023.0" y="613.0" width="24" height="24" rx="12" fill="#F2B544" stroke="#0A3D42" stroke-width="1.4"/><text x="1035.0" y="629.5" font-size="13" font-weight="700" text-anchor="middle" fill="#10282D">3</text>
-<line x1="735.0" y1="650" x2="735.0" y2="690" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)"/>
+<line x1="735.0" y1="670" x2="735.0" y2="700" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)"/>
 <line x1="860" y1="740" x2="1210" y2="740" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)"/>
 <text x="1035.0" y="723.0" font-size="11.5" font-weight="600" text-anchor="middle" fill="#0A3D42" stroke="#F7FAFA" stroke-width="4" paint-order="stroke">reads plan rules</text>
 <rect x="30" y="823" width="26" height="16" rx="4" fill="#E3F1F2" stroke="#0A3D42" stroke-width="1.5"/><text x="64" y="836" font-size="12.5" fill="#4F6468">Channels</text>

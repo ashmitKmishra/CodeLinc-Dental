@@ -27,7 +27,7 @@ A password needs 8 or more characters with an upper-case letter, a lower-case le
 ## Deploying
 
 - **Website** after a front-end change: `./scripts/deploy_web.sh` (needs Node and the `workshop` profile). Stack `codelinc-dental-web`, template `infra/web.yaml`.
-- **API** after a Lambda or template change: zip `backend/rag/handler.py` with `rds-global-bundle.pem` and `pg8000`, upload it to the data bucket, then `aws cloudformation deploy`. Stack `codelinc-dental-rag`, template `backend/rag/template.yaml`. Steps are in `backend-record.md`.
+- **API** after a Lambda or template change: `./backend/rag/deploy.sh`. It packages `handler.py`, `advisor.py`, the RDS CA bundle and pg8000, then deploys the stack `codelinc-dental-rag` (template `backend/rag/template.yaml`). Offline tests: `python3 -m unittest backend/rag/test_advisor.py`. More detail is in `backend-record.md`.
 - **Database changes** need the admin login, which is only available through `asm-exec` (see the header of `scripts/load_users_chat.py`).
 - **TLS:** API Gateway, Cognito and the database connection require TLS 1.2 or newer. CloudFront's default address still accepts older versions. Fixing that needs a custom domain.
 
