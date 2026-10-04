@@ -3,7 +3,7 @@
 Final goal: full-stack deployment on AWS. **Order: RAG on Bedrock first, then the API, then the frontend.**
 
 ## 0. Housekeeping
-- [ ] Revert RDS port 8443 -> 5432 and remove the 8443 security-group rule (see `record.md`).
+- [x] RDS port stays on **8443** (the venue Wi-Fi blocks 5432). Keep the 8443 security-group rule, and use port 8443 in every connection string and in the Lambda's security group.
 - [ ] Decide the database: `md-files/BACKEND.md` §13 defaults to DynamoDB, with Postgres as the swap. Agree with the team (B owns data) before building more on RDS.
 - [ ] Replace the random network flags in `nc_hospitals` with real payer directory data if accuracy starts to matter.
 
@@ -21,8 +21,7 @@ Final goal: full-stack deployment on AWS. **Order: RAG on Bedrock first, then th
 - [ ] CORS for the dashboard origin.
 
 ## 3. Messaging
-- [ ] The team docs specify Twilio SMS. iMessage has no public API, so confirm: Twilio SMS, or Apple Messages for Business.
-- [ ] Identity from the verified sender number, never from message text.
+Out of scope for this workstream. Someone else owns it. The Bedrock API does the LLM work and this workstream only supplies the data and retrieval.
 
 ## 4. Frontend
 - [ ] Dashboard per `md-files/FRONTEND.md`, reading only from the API.

@@ -23,7 +23,7 @@ Each file drops and rebuilds its table, so it is safe to re-run.
 
 ## Gotchas
 
-- The hackathon Wi-Fi blocks outbound port 5432. Ports 443, 8080, 8443 and 2222 get through. To work around it the instance port was moved to **8443**, with an extra 8443 inbound rule for the dev IP. **Current state: still on 8443.** Revert to 5432 and drop the 8443 rule when on a normal network.
+- The hackathon Wi-Fi blocks outbound port 5432. Ports 443, 8080, 8443 and 2222 get through. To work around it the instance port was moved to **8443**, with an extra 8443 inbound rule for the dev IP. **Decision: it stays on 8443.** Use 8443 everywhere.
 - The allowed IP is a single address. If your IP changes, update the security group.
 - The instance is billed while it runs. Stop or delete it after the hackathon.
 
