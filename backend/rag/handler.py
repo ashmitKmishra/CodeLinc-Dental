@@ -12,18 +12,26 @@ Routes (all JSON, all need "Authorization: Bearer <Cognito ID token>"):
   GET  /v1/turns/{id}                      -> {"id","status":"completed","reply": Message}
 The phone always comes from the verified token, never the request, so one patient can never read another's rows.
 
+POST /v1/twilio/sms is the one route without a JWT: Twilio's SMS/WhatsApp webhook. It is authenticated by the X-Twilio-Signature
+header instead, and the sender's phone number (From) is the identity. It answers in the TwiML reply, so no outbound internet is needed.
+
 Answer flow (backend/rag/advisor.py): a first model call only picks the person and treatments; code looks up the stored estimates and does all
 the arithmetic; a second call writes the reply in the voice of the family's advocate from those facts; any figure, email, phone number or
 link that is not in the facts is rejected (one retry, then a code-written reply).
 """
 import base64
+import hashlib
+import hmac
 import json
 import os
 import re
 import ssl
 import traceback
+import time
 import uuid
 from datetime import date, timezone
+from urllib.parse import parse_qsl
+from xml.sax.saxutils import escape
 
 import boto3
 import pg8000.native
@@ -36,6 +44,10 @@ DB_PORT = int(os.environ.get("DB_PORT", "8443"))
 DB_USER = os.environ.get("DB_USER", "api_app")
 MODEL_ID = os.environ.get("MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
 EMBED_MODEL = "amazon.titan-embed-text-v2:0"
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_WEBHOOK_URL = os.environ.get("TWILIO_WEBHOOK_URL", "")  # only needed behind a custom domain; Twilio signs the exact URL it calls
+TWILIO_BUDGET_MS = 13000  # Twilio gives up on a webhook after 15 s
+WHATSAPP_IDLE_SECONDS = 24 * 3600  # a text after this long starts a new conversation
 TOP_K = 5
 HISTORY_TURNS = 20  # messages (10 exchanges) of this chat replayed to the model
 
@@ -45,6 +57,13 @@ bedrock = boto3.client("bedrock-runtime", region_name=REGION)
 SSL = ssl.create_default_context(cafile=os.path.join(os.path.dirname(__file__), "rds-global-bundle.pem"))
 SSL.minimum_version = ssl.TLSVersion.TLSv1_2  # never fall back below TLS 1.2 to the database
 PHONE_RE = re.compile(r"^\+[1-9]\d{9,14}$")
+TWILIO_KEYWORDS = {"STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "START", "UNSTOP", "YES", "HELP", "INFO"}
+
+class ApiErr(Exception):
+    def __init__(self, status, code, message, retryable=False):
+        super().__init__(message)
+        self.status, self.code, self.message, self.retryable = status, code, message, retryable
+
 
 def _connect():
     token = rds.generate_db_auth_token(DBHostname=DB_HOST, Port=DB_PORT, DBUsername=DB_USER, Region=REGION)
@@ -105,7 +124,7 @@ def _retrieve(conn, phone, query):
     return out
 
 
-def _answer(conn, phone, conversation_id, question):
+def _answer(conn, phone, conversation_id, question, time_left=None):
     # Replies the guardrail had replaced are left out, so the model never copies their style.
     history = conn.run("SELECT role, text FROM chat_messages WHERE phone = :p AND conversation_id = CAST(:c AS uuid) "
                        "AND role IN ('user','assistant') AND NOT guardrail_replaced ORDER BY created_at DESC LIMIT :n",
@@ -126,32 +145,67 @@ def _answer(conn, phone, conversation_id, question):
             "SELECT name, email, phone, info_url FROM hospital_contacts WHERE name = ANY(CAST(:n AS text[]))", n=names)}
         return [{"name": n, "email": found[n][0], "phone": found[n][1], "url": found[n][2]} for n in names if n in found]
 
-    ctx = _CTX
-    time_left = (lambda: ctx.get_remaining_time_in_millis()) if ctx else (lambda: 30000)
+    if time_left is None:
+        ctx = _CTX
+        time_left = (lambda: ctx.get_remaining_time_in_millis()) if ctx else (lambda: 30000)
     answer, sel, replaced = advisor.respond(bedrock, MODEL_ID, history, question, rows, user, lookup_contacts, date.today(), time_left)
     return answer, [{"disease": d} for d in sel["treatments"]], replaced
 
 
-def _post_turn(conn, phone, body):
+def _store_exchange(conn, phone, cid, channel, text, time_left=None):
+    """Stores the question, answers it and stores the answer. Returns (answer text, assistant message id)."""
+    # Stored first so the chat shows it while the answer is generated; _answer drops it from the history it replays.
+    conn.run("INSERT INTO chat_messages (phone, conversation_id, channel, role, text) VALUES (:p, CAST(:c AS uuid), :ch, 'user', :t)",
+             p=phone, c=cid, ch=channel, t=text)
+    answer, sources, replaced = _answer(conn, phone, cid, text, time_left)
+    rid = conn.run("INSERT INTO chat_messages (phone, conversation_id, channel, role, text, sources, guardrail_replaced) "
+                   "VALUES (:p, CAST(:c AS uuid), :ch, 'assistant', :t, CAST(:s AS jsonb), :g) RETURNING id",
+                   p=phone, c=cid, ch=channel, t=answer, s=json.dumps(sources), g=replaced)[0][0]
+    return answer, rid
+
+
+def _post_turn(conn, event, phone, body):
     text = str(body.get("text", "")).strip()
     if not text or len(text) > 500:
         raise ApiErr(400, "invalid_request", "Type a message first (max 500 characters).")
+    # Browsers always come through API Gateway and are always "app". The WhatsApp/SMS bot invokes this Lambda directly (no
+    # domainName in the event) and says which channel the text arrived on, so its threads are tagged and continued correctly.
+    channel = "app"
+    if "domainName" not in event.get("requestContext", {}) and body.get("channel") in ("whatsapp", "sms"):
+        channel = body["channel"]
     cid = body.get("conversationId")
-    if cid:  # continuing a thread: it must be this person's own in-app thread (WhatsApp threads are read-only here)
+    if cid:  # continuing a thread: it must be this person's own thread on the same channel (WhatsApp threads are read-only in the app)
         _uuid_or_404(cid)
-        rows = conn.run("SELECT 1 FROM chat_messages WHERE phone = :p AND conversation_id = CAST(:c AS uuid) AND channel = 'app' LIMIT 1",
-                        p=phone, c=cid)
+        rows = conn.run("SELECT 1 FROM chat_messages WHERE phone = :p AND conversation_id = CAST(:c AS uuid) AND channel = :ch LIMIT 1",
+                        p=phone, c=cid, ch=channel)
         if not rows:
             raise ApiErr(400, "invalid_request", "That conversation can't be continued here. Start a new chat instead.")
     else:
         cid = str(uuid.uuid4())
-    # Stored first so the chat shows it while the answer is generated; _answer drops it from the history it replays.
-    conn.run("INSERT INTO chat_messages (phone, conversation_id, role, text) VALUES (:p, CAST(:c AS uuid), 'user', :t)", p=phone, c=cid, t=text)
-    answer, sources, replaced = _answer(conn, phone, cid, text)
-    rid = conn.run("INSERT INTO chat_messages (phone, conversation_id, role, text, sources, guardrail_replaced) "
-                   "VALUES (:p, CAST(:c AS uuid), 'assistant', :t, CAST(:s AS jsonb), :g) RETURNING id",
-                   p=phone, c=cid, t=answer, s=json.dumps(sources), g=replaced)[0][0]
+    _, rid = _store_exchange(conn, phone, cid, channel, text)
     return 200, {"turnId": str(rid), "conversationId": cid}
+
+
+def _bot_log(conn, event, phone, body):
+    """Stores an exchange the WhatsApp/SMS bot answered itself (greeting, general answer), so the whole thread shows in the app.
+    Direct invocations only: API Gateway events have a domainName and never get past this check."""
+    if "domainName" in event.get("requestContext", {}):
+        raise ApiErr(404, "not_found", "No such endpoint.")
+    channel, text, reply = body.get("channel"), str(body.get("text", "")).strip(), str(body.get("reply", "")).strip()
+    if channel not in ("whatsapp", "sms") or not text or not reply:
+        raise ApiErr(400, "invalid_request", "channel (whatsapp|sms), text and reply are required.")
+    cid = body.get("conversationId")
+    try:
+        uuid.UUID(str(cid))
+        known = conn.run("SELECT 1 FROM chat_messages WHERE phone = :p AND conversation_id = CAST(:c AS uuid) AND channel = :ch LIMIT 1",
+                         p=phone, c=cid, ch=channel)
+    except ValueError:
+        known = None
+    cid = str(cid) if known else str(uuid.uuid4())
+    for role, t in (("user", text), ("assistant", reply)):
+        conn.run("INSERT INTO chat_messages (phone, conversation_id, channel, role, text) VALUES (:p, CAST(:c AS uuid), :ch, :r, :t)",
+                 p=phone, c=cid, ch=channel, r=role, t=t)
+    return 200, {"conversationId": cid}
 
 
 def _uuid_or_404(value):
@@ -198,6 +252,54 @@ def _me(conn, phone):
     return 200, {"user": _user_json(rows[0])}
 
 
+# ---------------------------------------------------------------- Twilio (SMS / WhatsApp)
+
+def _twiml(text=None):
+    body = f"<Message>{escape(text)}</Message>" if text else ""
+    return {"statusCode": 200, "headers": {"content-type": "text/xml"}, "body": f'<?xml version="1.0" encoding="UTF-8"?><Response>{body}</Response>'}
+
+
+def _twilio_signature_ok(event, params):
+    """Twilio signs the full webhook URL plus every POST field (sorted by name) with the account auth token (HMAC-SHA1, base64)."""
+    if not TWILIO_AUTH_TOKEN:
+        return False
+    ctx = event.get("requestContext", {})
+    url = TWILIO_WEBHOOK_URL or f"https://{ctx.get('domainName', '')}{event.get('rawPath', '')}"
+    if event.get("rawQueryString"):
+        url += "?" + event["rawQueryString"]
+    data = url + "".join(k + v for k, v in sorted(params.items()))
+    expected = base64.b64encode(hmac.new(TWILIO_AUTH_TOKEN.encode(), data.encode(), hashlib.sha1).digest()).decode()
+    headers = {k.lower(): v for k, v in (event.get("headers") or {}).items()}
+    return hmac.compare_digest(expected, headers.get("x-twilio-signature", ""))
+
+
+def _twilio_sms(conn, event, raw):
+    started = time.monotonic()
+    params = dict(parse_qsl(raw, keep_blank_values=True))
+    if not _twilio_signature_ok(event, params):
+        return _respond(403, {"error": {"code": "forbidden", "message": "Bad Twilio signature.", "retryable": False}})
+    sender = params.get("From", "")
+    channel = "whatsapp" if sender.startswith("whatsapp:") else "sms"
+    phone = sender.removeprefix("whatsapp:")
+    text = params.get("Body", "").strip()
+    if not PHONE_RE.match(phone) or not text:
+        return _twiml()
+    if text.upper() in TWILIO_KEYWORDS:  # Twilio answers STOP/HELP-style keywords itself; a second reply would double up
+        return _twiml()
+    if not conn.run("SELECT 1 FROM users WHERE phone = :p", p=phone):
+        return _twiml("Sorry, that number isn't on a Floss plan.")
+    text = text[:500]
+    # One running conversation per number and channel; it starts fresh after a day of silence.
+    row = conn.run("SELECT conversation_id, max(created_at) AS last FROM chat_messages WHERE phone = :p AND channel = :ch "
+                   "GROUP BY conversation_id ORDER BY last DESC LIMIT 1", p=phone, ch=channel)
+    if row and (time.time() - row[0][1].timestamp()) < WHATSAPP_IDLE_SECONDS:
+        cid = str(row[0][0])
+    else:
+        cid = str(uuid.uuid4())
+    answer, _ = _store_exchange(conn, phone, cid, channel, text, lambda: TWILIO_BUDGET_MS - int((time.monotonic() - started) * 1000))
+    return _twiml(answer[:1500])  # WhatsApp/SMS bodies max out at 1600 characters
+
+
 # ---------------------------------------------------------------- entry
 
 def _respond(code, body):
@@ -213,7 +315,9 @@ def _route(conn, event, method, path, query, body):
     if method == "GET" and path == "/v1/messages":
         return _list_messages(conn, phone, query)
     if method == "POST" and path == "/v1/turns":
-        return _post_turn(conn, phone, body)
+        return _post_turn(conn, event, phone, body)
+    if method == "POST" and path == "/v1/bot/log":
+        return _bot_log(conn, event, phone, body)
     if method == "GET" and path.startswith("/v1/turns/"):
         return _get_turn(conn, phone, path[len("/v1/turns/"):])
     raise ApiErr(404, "not_found", "No such endpoint.")
@@ -228,6 +332,16 @@ def lambda_handler(event, context):
     raw = event.get("body") or ""
     if raw and event.get("isBase64Encoded"):
         raw = base64.b64decode(raw).decode()
+    if method == "POST" and path == "/v1/twilio/sms":
+        try:
+            conn = _connect()
+            try:
+                return _twilio_sms(conn, event, raw)
+            finally:
+                conn.close()
+        except Exception:
+            print("unhandled twilio error", rid, traceback.format_exc())
+            return _twiml("Sorry, I'm having trouble answering right now. Please try again in a minute.")
     try:
         body = json.loads(raw) if raw else {}
         if not isinstance(body, dict):

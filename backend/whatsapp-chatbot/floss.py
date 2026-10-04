@@ -51,9 +51,17 @@ def profile(phone):
     return _invoke(phone, "GET", "/v1/me")["user"]
 
 
+def log_turn(phone, text, reply, conversation_id=None):
+    """Save an exchange the bot answered itself (greeting, general answer) next to the Floss turns. Returns the conversation id."""
+    body = {"text": text, "reply": reply, "channel": "whatsapp" if phone.startswith("whatsapp:") else "sms"}
+    if conversation_id:
+        body["conversationId"] = conversation_id
+    return _invoke(phone, "POST", "/v1/bot/log", body)["conversationId"]
+
+
 def ask(phone, text, conversation_id=None):
     """Return (reply, conversation_id). Continues conversation_id when it is still valid. Raises NotMember."""
-    body = {"text": text[:500]}
+    body = {"text": text[:500], "channel": "whatsapp" if phone.startswith("whatsapp:") else "sms"}
     try:
         turn = _invoke(phone, "POST", "/v1/turns", {**body, "conversationId": conversation_id} if conversation_id else body)
     except RuntimeError:
