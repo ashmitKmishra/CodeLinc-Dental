@@ -12,6 +12,8 @@ Parameters:
   CodeKey: {Type: String}
   ModelId: {Type: String, Default: 'us.anthropic.claude-haiku-4-5-20251001-v1:0'}
   DbUser: {Type: String, Default: api_app, Description: 'IAM-auth Postgres role the Lambda logs in as (db/04_users_chat.sql)'}
+  TwilioAuthToken: {Type: String, NoEcho: true, Default: '', Description: 'Twilio account auth token; validates X-Twilio-Signature on the SMS/WhatsApp webhook (the webhook rejects everything while empty)'}
+  TwilioWebhookUrl: {Type: String, Default: '', Description: 'Only if the API is behind a custom domain: the exact URL configured in Twilio'}
   AllowedOrigins: {Type: CommaDelimitedList, Default: 'https://d3unrkn8gkr6mk.cloudfront.net,http://127.0.0.1:5173,http://localhost:5173', Description: CORS origins for the web app}
 
 Resources:
@@ -84,7 +86,8 @@ Resources:
         SubnetIds: !Ref SubnetIds
         SecurityGroupIds: [!Ref LambdaSg]
       Environment:
-        Variables: {DB_HOST: !Ref DbHost, DB_PORT: !Ref DbPort, DB_USER: !Ref DbUser, MODEL_ID: !Ref ModelId}
+        Variables: {DB_HOST: !Ref DbHost, DB_PORT: !Ref DbPort, DB_USER: !Ref DbUser, MODEL_ID: !Ref ModelId,
+          TWILIO_AUTH_TOKEN: !Ref TwilioAuthToken, TWILIO_WEBHOOK_URL: !Ref TwilioWebhookUrl}
 
   # Sign in with phone number + password (Cognito checks it over TLS). Admin-create only: nobody can self-register.
   UserPool:
@@ -135,7 +138,7 @@ Resources:
       TimeoutInMillis: 29000
 
   # Explicit routes, so OPTIONS preflights are answered by the API's CORS config and never reach the Lambda.
-  # Every route needs a valid Cognito ID token; there are no unauthenticated routes.
+  # Every route needs a valid Cognito ID token except the Twilio webhook below.
   JwtAuthorizer:
     Type: AWS::ApiGatewayV2::Authorizer
     Properties:
@@ -152,6 +155,9 @@ Resources:
   RouteMessages: {Type: AWS::ApiGatewayV2::Route, Properties: {ApiId: !Ref HttpApi, RouteKey: 'GET /v1/messages', AuthorizationType: JWT, AuthorizerId: !Ref JwtAuthorizer, Target: !Sub 'integrations/${Integration}'}}
   RouteTurns: {Type: AWS::ApiGatewayV2::Route, Properties: {ApiId: !Ref HttpApi, RouteKey: 'POST /v1/turns', AuthorizationType: JWT, AuthorizerId: !Ref JwtAuthorizer, Target: !Sub 'integrations/${Integration}'}}
   RouteTurn: {Type: AWS::ApiGatewayV2::Route, Properties: {ApiId: !Ref HttpApi, RouteKey: 'GET /v1/turns/{id}', AuthorizationType: JWT, AuthorizerId: !Ref JwtAuthorizer, Target: !Sub 'integrations/${Integration}'}}
+
+  # Twilio's SMS/WhatsApp webhook: no JWT (Twilio has none); the Lambda checks X-Twilio-Signature instead.
+  RouteTwilioSms: {Type: AWS::ApiGatewayV2::Route, Properties: {ApiId: !Ref HttpApi, RouteKey: 'POST /v1/twilio/sms', AuthorizationType: NONE, Target: !Sub 'integrations/${Integration}'}}
 
   Stage:
     Type: AWS::ApiGatewayV2::Stage
@@ -173,4 +179,5 @@ Outputs:
   FunctionName: {Value: !Ref Function}
   UserPoolId: {Value: !Ref UserPool}
   UserPoolClientId: {Value: !Ref UserPoolClient, Description: 'Set VITE_COGNITO_CLIENT_ID to this'}
+  TwilioWebhookUrl: {Value: !Sub '${HttpApi.ApiEndpoint}/v1/twilio/sms', Description: 'Paste into Twilio: "A message comes in" (HTTP POST) on the number / WhatsApp sandbox'}
   ApiUrl: {Value: !GetAtt HttpApi.ApiEndpoint, Description: 'Set VITE_API_BASE_URL to this'}
