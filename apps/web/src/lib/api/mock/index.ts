@@ -72,6 +72,11 @@ export function createMockApi(getUser: () => AuthUser | null): FlossApi {
       if (!t) throw new FlossApiError('not_found', 'That request is no longer available.', false, 404);
       return structuredClone(t);
     },
+    async listConversations() {
+      const first = s.messages.find((m) => m.role === 'user');
+      const last = s.messages[s.messages.length - 1];
+      return first && last ? [{ id: 'mock-thread', channel: 'app' as const, title: first.text.slice(0, 60), updatedAt: last.createdAt, messageCount: s.messages.length }] : [];
+    },
     async listMessages({ limit = 50 } = {}) { return { messages: structuredClone(s.messages.slice(-limit)), nextCursor: null }; },
     async confirmAction(id) {
       await wait(250);
@@ -125,6 +130,7 @@ export function createMockApi(getUser: () => AuthUser | null): FlossApi {
         s.messaging = { ...s.messaging, status: 'linked', maskedPhone: '+1 ••• ••• 4567' }; s.bump();
       },
       reset() { s = new MockStore(); },
+      setMembers(members) { if (JSON.stringify(s.membersOverride) !== JSON.stringify(members)) { s.membersOverride = members; s.seed(); } },
     },
   };
   return api;

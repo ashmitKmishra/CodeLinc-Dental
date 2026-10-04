@@ -33,3 +33,6 @@ CLAUDE.md
 .env.local
 coverage/
 .vite/
+
+# Real contact details used to create Cognito users (see scripts/cognito_users.example.json)
+scripts/*.local.json
