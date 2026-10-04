@@ -40,7 +40,7 @@ export function ChatMessage({ message: m, snapshot, busy, onConfirm, onCancel }:
           if (c.type === 'usage') {
             const member = snapshot.household.members.find((x) => x.id === c.memberId);
             const usage: MemberUsage | undefined = snapshot.usage.find((x) => x.memberId === c.memberId);
-            return member && usage ? <div key={i} className="w-full max-w-sm"><MemberUsageCard member={member} index={snapshot.household.members.indexOf(member)} usage={usage} /></div> : null;
+            return member && usage ? <div key={i} className="w-full max-w-sm"><MemberUsageCard member={member} index={snapshot.household.members.indexOf(member)} usage={usage} className="aspect-auto" /></div> : null;
           }
           const a: PendingAction = pendingNow.has(c.action.id) ? c.action : { ...c.action, status: c.action.status === 'pending' ? 'applied' : c.action.status };
           return <div key={i} className="w-full"><PendingActionCard action={a} busy={busy} onConfirm={() => onConfirm(a.id)} onCancel={() => onCancel(a.id)} /></div>;
