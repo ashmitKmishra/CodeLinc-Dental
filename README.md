@@ -69,7 +69,7 @@ Money math, such as what the plan pays for a crown, belongs in the cost engine i
 | Chat answers (`backend/rag/advisor.py`) | Live, tested | A picker call, code-built facts, a writer call and a figure check, as in step 4 above. Offline tests: `python3 -m unittest backend/rag/test_advisor.py`. A filling with no price on file says a manual check is needed and gives no number. |
 | Bedrock | Live | Titan Text Embeddings v2 and Claude Haiku 4.5, reached over a VPC endpoint. |
 | Postgres + pgvector on RDS (`db/`, `scripts/`) | Live | 1024-dimension vectors, cosine HNSW index. 20 treatment rows (4 people, 5 conditions), plus tables for patients, 30 NC hospitals and 30 NC dental costs. Plan PDF chunks are not loaded yet. |
-| Hospital contacts | Live | 30 hospitals with phone, website and, where the hospital publishes one, an email. Floss points a patient to the right hospital to confirm a price. |
+| Hospital contacts | Live | 30 hospitals with phone, website and, where the hospital publishes one, an email. When a price is missing or the question is outside the stored rows, Floss points the patient to the right hospital to confirm it and offers to draft a message to the hospital that includes the member number of the person the treatment is for. Floss only drafts the message. The patient sends it, and only to a contact detail stored in the table. |
 | Cost engine | Partial | In the Lambda, code does the arithmetic for the five stored treatments: savings against out-of-network, and corrected braces totals under the plan's lifetime orthodontic limit. A general plan-rules engine for any procedure is not written. The web app's sample-data mode has its own tested calculator (15 tests). |
 | Plan parsing | Planned | The web app ships the parsed result for six plans. The pipeline that produces it from a PDF is not built. |
 | Twilio texting and WhatsApp | In progress | A Flask webhook that validates Twilio's signature and calls Bedrock is on the `whatsapp-chatbot` branch. It is separate from the API Lambda and keeps its own SQLite history, so nothing sends WhatsApp messages through Floss yet and WhatsApp history is empty. |
@@ -88,7 +88,7 @@ Dashboard. Annual maximum used and left per family member, reminders, and the pl
 
 ![Texting](docs/screenshots/texting.png)
 
-Texting. Link a phone with a one-time code and the same conversation continues by message.
+Texting (sample-data mode). Link a phone with a one-time code. The live site does not offer this yet.
 
 ![Phone view](docs/screenshots/mobile.png)
 
@@ -107,7 +107,7 @@ The first three rows are the challenge's required asks. The last three are its b
 | In-network vs out-of-network | In-network and out-of-network cost and hospital for each treatment | Live |
 | Remind before benefits expire | Reminders 60, 30 and 14 days before the plan year ends, per person | Shown in the app, sending is planned |
 
-Also in the app: a saved chat history with separate threads, and a household with more than one person.
+Also in the app: a saved chat history with separate threads, a household with more than one person, and hospital contact details with a drafted message when a price needs confirming.
 
 ## Try the live site
 
