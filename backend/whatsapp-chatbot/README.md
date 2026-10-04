@@ -9,10 +9,22 @@ phone <--SMS-- Twilio <--messages.create-- (background thread)
 
 | File | What it does |
 |---|---|
-| `app.py` | Flask webhook. Validates Twilio's signature, replies instantly with empty TwiML, answers in a background thread. |
+| `bot.py` | Shared logic: allowlist, rate limit, RESET, asking the model, sending the reply from the number that was messaged. |
+| `app.py` | Local Flask server. Validates Twilio's signature, replies instantly with empty TwiML, answers in a background thread. |
+| `lambda_function.py` / `deploy.py` | The same bot on AWS Lambda, and a one-command deploy script (see below). |
 | `bedrock.py` | Calls the fine-tuned model, falls back to a stock model, always returns *something* to text back. |
 | `history.py` | Per-number chat history in SQLite (`chat.db`). Also your log for evaluating the fine-tune. |
 | `chat.py` | Talk to the model from the terminal, no Twilio needed. Also lists your fine-tuned model ARNs. |
+
+## Floss AI: answers from the member's own plan
+
+With `FLOSS_RAG_FUNCTION=codelinc-dental-rag`, the bot answers as Floss AI, the dental assistant for Lincoln employees:
+
+- "hi", "who are you" and similar get a personalised introduction (procedure info, plan maximums, current plan details).
+- Questions from a number in the `users` table go to the team's RAG Lambda (`backend/rag`), which answers only from that member's own rows: plan, family, treatment estimates, hospitals. `floss.py` invokes it directly with the sender's number as the identity (Twilio's signature has already been checked), so WhatsApp users don't sign in with Cognito. The team agreed to this trust model for the hackathon.
+- Follow-ups continue the same Floss conversation; `RESET` starts a new one. Messages are stored in `chat_messages` like app chats.
+- Numbers not in `users`, or any Floss error, fall back to a general Bedrock answer that never invents personal prices.
+- Not available yet: how much of the annual maximum a member has already used (no claims data in the database).
 
 ## How it stays working
 
@@ -83,11 +95,26 @@ Set `TWILIO_VALIDATE_SIGNATURE=false` and leave the Twilio creds blank (replies 
 curl -X POST localhost:8080/sms -d From=+15551234567 -d Body="What is photosynthesis?"
 ```
 
-## Deploy (instead of ngrok)
+## Deploy to AWS Lambda (permanent URL, no laptop needed)
 
-Render / Railway: point them at this folder; the `Procfile` runs gunicorn. Copy `.env` values into their env settings,
-set `PUBLIC_URL` to the service URL, and update the Twilio webhook. On AWS (App Runner/ECS), use an IAM role instead of keys.
-Keep **one** worker: rate limiting is in memory. SQLite lives on local disk, which resets on redeploy for most hosts.
+```bash
+python deploy.py
+```
+
+It creates (or updates) everything in `AWS_REGION` and prints the URL to paste into Twilio:
+
+| Resource | Purpose |
+|---|---|
+| Lambda `whatsapp-chatbot` + Function URL | `lambda_function.py`: answers Twilio instantly, then invokes itself in the background to call the model and send the reply |
+| DynamoDB `whatsapp-chatbot-history` | Chat history per number (on-demand billing, free at hackathon volume) |
+| IAM role `whatsapp-chatbot-role` | Lets the function call Bedrock, DynamoDB and CloudWatch Logs, so no AWS keys live in the function |
+
+- Your local AWS credentials are only used to deploy, and need permission to create IAM roles, Lambda functions and DynamoDB tables. Temporary hackathon credentials work: put `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN` in `.env`.
+- Twilio and model settings are copied from `.env` into the function's environment variables. After changing `.env`, run `python deploy.py` again; the URL stays the same.
+- Deploy in the same region as your fine-tuned model deployment.
+- Logs: CloudWatch → Log groups → `/aws/lambda/whatsapp-chatbot`.
+
+Other hosts (Render / Railway): the `Procfile` runs gunicorn with `app.py`. Set `PUBLIC_URL` to the service URL and keep one worker.
 
 ## Before the public can text it
 
