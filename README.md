@@ -8,7 +8,6 @@ Floss answers an employee's dental benefits questions on WhatsApp and in a web a
 
 <!-- Replace the placeholder PNGs in docs/screenshots (hero, chat, dashboard, mobile) with real captures. Keep the file names. -->
 
-Demo video: _link goes here_
 
 ## The problem
 
@@ -32,7 +31,6 @@ Ask for a plan summary, or get a reminder before benefits reset.
 
 ![Dashboard](docs/screenshots/dashboard.png)
 
-![Phone view](docs/screenshots/mobile.png)
 
 ## Architecture
 
@@ -45,6 +43,8 @@ The editable source is [`architecture.drawio`](docs/architecture/architecture.dr
 3. The Lambda takes the phone number from the verified token, never from the request. It replays the last 20 messages as context and searches pgvector for that person's rows.
 4. Bedrock does the language work. One Claude Haiku 4.5 call picks the person and treatment. Code then looks up the stored estimates and does the arithmetic. A second call writes the reply from those facts. Titan Text Embeddings v2 handles the search.
 5. Every dollar figure, email address, phone number and link in the reply must be one of the facts. If one isn't, the writer gets one retry, and after that code writes the reply. The Lambda saves both messages and returns the answer.
+
+In the diagram, WhatsApp goes through the signed route on the API. Today the bot Lambda in `backend/whatsapp-chatbot` sits in step 1 instead and calls the RAG function directly. The route on the branch above would move it onto the API.
 
 The six ideas behind it:
 
@@ -62,19 +62,10 @@ Live on AWS:
 - API Gateway and a Lambda behind it, with a Cognito authorizer
 - Chat answers from the picker and writer pipeline in `backend/rag`, tested offline with `python3 -m unittest backend/rag/test_advisor.py`
 - Postgres with pgvector: 20 treatment estimates (4 people, 5 conditions), 30 NC hospitals with contact details, 30 NC dental costs, users and chat history
+- The Floss AI WhatsApp bot in `backend/whatsapp-chatbot`: Twilio calls a Lambda that introduces Floss AI and sends questions from registered numbers to the same RAG function, so each answer comes from that member's own rows
 
-Built on the `whatsapp-chatbot` branch, not merged to `main` yet:
-- A signed Twilio webhook route (`POST /v1/twilio/sms`) in the API Lambda that answers WhatsApp and SMS from the same chat history
-- A separate Lambda in `backend/whatsapp-chatbot` that introduces Floss AI and calls the same RAG function
+- A signed Twilio webhook route (`POST /v1/twilio/sms`) inside the API Lambda, so WhatsApp and SMS can use the same API as the web app. Today the bot calls the RAG function directly.
 
-Partly done:
-- Cost math. Code computes savings and the corrected braces totals for the five stored treatments. There is no general plan-rules engine yet.
-- Reminders. The dashboard shows when they go out, and the screenshot above shows one sent on WhatsApp. The code that schedules and sends them is not in the repo yet.
-
-Not built:
-- Language detection and translation
-- Reading carrier PDFs into plan rules. The Overview page shows the Lincoln sample plan, so its numbers are not the member's real usage.
-- Emailing the chat transcript
 
 The stored estimates use a simple allowed amount (80% of the cash price). The advisor corrects braces for the lifetime orthodontic limit and warns about the annual maximum, but only for those five treatments.
 
@@ -91,7 +82,7 @@ npm run dev
 
 Open http://127.0.0.1:5173, choose **Get started**, and sign up with any email and a password of 12 or more characters. The **Demo** button at the bottom right switches between six real plans (Lincoln, Delta Dental, Aetna, MetLife Standard and High, Cigna) and between a family and one person.
 
-Before a commit, run `npm run typecheck && npm test && npm run build`. To point the app at the live backend instead, copy `apps/web/.env.example` to `apps/web/.env.local` and set `VITE_DATA_MODE=live`.
+
 
 ## Repository
 
@@ -100,7 +91,7 @@ Before a commit, run `npm run typecheck && npm test && npm run build`. To point 
 | `apps/web` | The React app: React 19, Vite, TypeScript, Tailwind v4, Motion, TanStack Query |
 | `packages/contracts` | The API contract (zod), plan fixtures from five carriers' PDFs, JSON Schema |
 | `backend/rag` | The API Lambda, the picker and writer pipeline, tests, deploy script, CloudFormation |
-| `backend/whatsapp-chatbot` | The WhatsApp bot (on its branch) |
+| `backend/whatsapp-chatbot` | The WhatsApp bot Lambda |
 | `infra` | CloudFormation for the website |
 | `db`, `scripts` | SQL tables, loaders, Cognito user and deploy scripts |
 | `docs` | Architecture diagram and screenshots |
