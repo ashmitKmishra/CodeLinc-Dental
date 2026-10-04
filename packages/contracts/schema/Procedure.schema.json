@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "plainName": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "coverageClass": {
+      "type": "string",
+      "enum": [
+        "preventive",
+        "basic",
+        "major",
+        "ortho"
+      ]
+    },
+    "frequencyKey": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "code",
+    "name",
+    "plainName",
+    "description",
+    "coverageClass",
+    "frequencyKey"
+  ],
+  "additionalProperties": false
+}

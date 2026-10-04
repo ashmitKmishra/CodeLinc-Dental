@@ -13,6 +13,28 @@ Owner: A (Ashmit). Read `CONTEXT.md` (what and why) and `BACKEND.md` §4–5 (th
 
 **Goal: no back-and-forth while coding.** Everything visual is decided in Figma before code. Every data shape is mocked from the contract before the backend exists.
 
+## Built (Oct 3): how to run it
+
+```bash
+npm install && npm run dev      # http://127.0.0.1:5173, mock mode with sample data
+```
+
+| Route | Screen | Data |
+| --- | --- | --- |
+| `/` | Landing: scroll-linked hero (`ScrollHero`), texting, how it works. Nav is exactly *How it works · Texting · Sign in* | none |
+| `/signup`, `/signin` | Account (mock accepts any valid credentials) | none |
+| `/app` | Overview, top to bottom: texting banner, **Reminders**, **Your plan on file**, annual max per person (adapts to one person), **Chat transcript**, sign out. Texting opens as a popup (Connect texting button, sidebar block). Mock-only floating **Demo** button | `Snapshot`, `PUT /v1/preferences`, `POST /v1/transcripts`, link-code endpoints |
+| `/app/chat` | AI buddy, same history as texts, **Email transcript** | `POST /v1/turns`, `GET /v1/turns/{id}` |
+| `/app/care`, `/app/settings` | Removed. Both redirect to `/app` | none |
+
+- **Structure:** `src/lib/api` has the `FlossApi` interface, `mock/` (store, stand-in engine, chat) and `live.ts` (fetch + zod validation against `@floss/contracts`). `VITE_DATA_MODE=live` switches every screen to the backend. Screens never import the mock.
+- **Hero scroll:** `components/landing/ScrollHero.tsx` follows the 21st *Container Scroll Animation* pattern (`design-refs/21st/`). `useScroll` on a tall section with a sticky stage; the card's `rotateX`, `scale` and `y` come from `scrollYProgress`. Nothing plays on a timer. Reduced motion renders it flat.
+- **Auth:** `src/lib/authStore.ts` is mock. Replace `signInMock` with Cognito hosted UI (PKCE) and store the token in `floss.token`; the live adapter already sends it as `Authorization: Bearer`.
+- **Not built (by decision):** PDF upload, appointments, office emails, provider verification, memory. The Figma file still shows some of these; the code and `BUILD-BRIEF.md` win.
+- **Not shadcn/ui yet:** primitives in `components/ui` are hand-written with the Floss tokens. Swap in shadcn components if the team wants them; the tokens in `styles/index.css` are the same.
+- **Checks:** `npm run typecheck && npm test && npm run build` (23 tests: the stand-in engine against numbers worked by hand from the Lincoln PDF, and mock-vs-contract conformance for all six plans).
+
+
 ---
 
 ## 0. The workflow in one picture
@@ -34,6 +56,24 @@ Install tools (30 min)
 - One component inventory (§4). No one-off styles in screens.
 
 ## 1. Tools
+
+**Figma file (built Oct 3):** https://www.figma.com/design/Oen8RIadWbldvFC79iN62a
+
+| Page | Contents |
+| --- | --- |
+| Foundations & Components | Variables, text and shadow styles, 33 icons, and components: Button, Chip, Source, Avatar, Channel, Nav item, Input |
+| App screens | Onboarding A–E; app F–J (Overview, Care, Chat, Activity, Settings); mobile M1–M2 |
+| Motion | Six keyframed moments with spec cards. Press play in Figma. |
+
+The App screens page also has three newer frames:
+
+- **K1 · Home after sign-in:** the upload section, then a full-page Gemini-style agent in Floss green.
+- **K2 · Agent conversation:** the prompt docks at the bottom once you ask.
+- **P · Plan PDF states:** 15 upload and reading cases, each mapped to `PlanDocument.status` / `error.code` in `contract-changes.md`.
+
+It also holds **L · Landing**: a green hero, the agent screen rising on scroll, a word-reveal section, "Or just text it", how it works, and a closing band. The 21st.dev component for each page is listed in `md-files/21ST-COMPONENTS.md`.
+
+All numbers in the file are sample placeholders from the demo fixture. In the app they come from the parsed plan PDF and `/v1/snapshot`.
 
 **Already set up in the repo:**
 
@@ -142,6 +182,8 @@ claude mcp add playwright -- npx @playwright/mcp@latest
 | `--danger` / `--danger-soft` | `#A4262C` / `#FBE5E6` | `#F07A7E` / `#3D1719` | Not covered, out of network, failed |
 | `--info` / `--info-soft` | `#1F5FA8` / `#E4EEF9` | `#7DB3F0` / `#132B45` | Tips, curiosity questions |
 | `--accent` | `#F2B544` | `#F2B544` | Highlights only (reset-line glow, savings sparkle); never text |
+| `--shell` / `--shell-active` | `#0A3D42` / `#14545A` | — | Teal sidebar and its active item |
+| `--shell-text` / `--shell-muted` | `#E6F2F1` / `#9CC3C1` | — | Text on the shell |
 
 **Family member colors** (dot, avatar ring, rail chip edge; always paired with the name):
 
@@ -298,7 +340,11 @@ Routes are fixed. Mobile tabs: **Overview · Care · Chat · Activity**; Setting
 
 1. **Welcome:** "See what your family's dental plan really pays." Two buttons: **Use the demo family** (Riveras) · **Set up my plan**.
 2. **Household:** add members (name, relationship, birth date).
-3. **Plan:** template picker → rules form in plain words. Each rule has a "Not sure" toggle that marks it *unknown* (warning chip).
+3. **Plan:**
+    - Upload the plan PDF (Summary of Benefits).
+    - **Review what we read:** each rule shows its plain-English value and a "Plan PDF · p.N" source chip; tapping a rule shows the highlighted page.
+    - Unclear or missing rules ask the user instead of guessing (see `contract-changes.md` §1).
+    - Sample plan and manual entry are fallbacks.
 4. **This year so far** (per member): used, deductible met, cleanings used, as-of date.
 5. **Providers:** name, office email, specialty, network (or "check for me").
 6. **Text Floss** (optional): the `LinkPhoneFlow`.

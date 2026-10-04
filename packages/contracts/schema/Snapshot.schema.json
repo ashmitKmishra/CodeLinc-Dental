@@ -1,0 +1,1953 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "revision": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "serverTime": {
+      "type": "string"
+    },
+    "user": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email"
+      ],
+      "additionalProperties": false
+    },
+    "household": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "firstName": {
+                "type": "string"
+              },
+              "relationship": {
+                "type": "string",
+                "enum": [
+                  "self",
+                  "spouse",
+                  "child",
+                  "other"
+                ]
+              },
+              "birthDate": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "firstName",
+              "relationship",
+              "birthDate"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "members"
+      ],
+      "additionalProperties": false
+    },
+    "plan": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "carrier": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "planYear": {
+          "type": "object",
+          "properties": {
+            "startMonth": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "startDay": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 31
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "startMonth",
+            "startDay",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        "sourceDocument": {
+          "type": "object",
+          "properties": {
+            "fileName": {
+              "type": "string"
+            },
+            "pages": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "fileName",
+            "pages"
+          ],
+          "additionalProperties": false
+        },
+        "tiers": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "in_network",
+                  "out_of_network",
+                  "any"
+                ]
+              },
+              "allowedBasis": {
+                "type": "string",
+                "enum": [
+                  "contracted",
+                  "usual_customary",
+                  "percentile",
+                  "nonparticipating_fee",
+                  "unknown"
+                ]
+              },
+              "allowedNote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "kind",
+              "allowedBasis"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "classRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "class": {
+                "type": "string",
+                "enum": [
+                  "preventive",
+                  "basic",
+                  "major",
+                  "ortho"
+                ]
+              },
+              "tierId": {
+                "type": "string"
+              },
+              "carrierLabel": {
+                "type": "string"
+              },
+              "examples": {
+                "type": "string"
+              },
+              "insurerRateBps": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "deductibleApplies": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "countsTowardAnnualMax": {
+                "type": "boolean"
+              },
+              "source": {
+                "type": "object",
+                "properties": {
+                  "page": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "quote": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "page"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "class",
+              "tierId",
+              "insurerRateBps",
+              "deductibleApplies",
+              "countsTowardAnnualMax"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "deductibles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "tierId": {
+                "type": "string"
+              },
+              "individualCents": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "familyCents": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source": {
+                "type": "object",
+                "properties": {
+                  "page": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "quote": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "page"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "tierId",
+              "individualCents",
+              "familyCents"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "annualMax": {
+          "type": "object",
+          "properties": {
+            "amountCents": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "appliesToClasses": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "preventive",
+                  "basic",
+                  "major",
+                  "ortho"
+                ]
+              }
+            },
+            "source": {
+              "type": "object",
+              "properties": {
+                "page": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "quote": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "page"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "amountCents",
+            "appliesToClasses"
+          ],
+          "additionalProperties": false
+        },
+        "orthoMax": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "lifetime",
+                "annual",
+                "none"
+              ]
+            },
+            "childCents": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "adultCents": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "childAgeLimit": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "adultsCovered": {
+              "type": "boolean"
+            },
+            "source": {
+              "type": "object",
+              "properties": {
+                "page": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "quote": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "page"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "type",
+            "childCents",
+            "adultCents",
+            "childAgeLimit",
+            "adultsCovered"
+          ],
+          "additionalProperties": false
+        },
+        "frequencyLimits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "maxCount": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "period": {
+                "type": "string",
+                "enum": [
+                  "calendar_year",
+                  "benefit_year",
+                  "months",
+                  "lifetime"
+                ]
+              },
+              "months": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "ageUnder": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "note": {
+                "type": "string"
+              },
+              "source": {
+                "type": "object",
+                "properties": {
+                  "page": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "quote": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "page"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "key",
+              "label",
+              "maxCount",
+              "period",
+              "months",
+              "ageUnder"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "waitingPeriods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "class": {
+                "type": "string",
+                "enum": [
+                  "preventive",
+                  "basic",
+                  "major",
+                  "ortho"
+                ]
+              },
+              "months": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "source": {
+                "type": "object",
+                "properties": {
+                  "page": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "quote": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "page"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "class",
+              "months"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "dependentAgeLimit": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "age": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "studentAge": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "age",
+                "studentAge"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "procedureClassOverrides": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "preventive",
+              "basic",
+              "major",
+              "ortho"
+            ]
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "plain": {
+                "type": "string"
+              },
+              "source": {
+                "type": "object",
+                "properties": {
+                  "page": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "quote": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "page"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "title",
+              "plain"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "isSynthetic": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "carrier",
+        "name",
+        "planYear",
+        "sourceDocument",
+        "tiers",
+        "classRules",
+        "deductibles",
+        "annualMax",
+        "orthoMax",
+        "frequencyLimits",
+        "waitingPeriods",
+        "dependentAgeLimit",
+        "procedureClassOverrides",
+        "notes",
+        "isSynthetic"
+      ],
+      "additionalProperties": false
+    },
+    "usage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "memberId": {
+            "type": "string"
+          },
+          "planYear": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "string"
+              },
+              "end": {
+                "type": "string"
+              },
+              "daysToReset": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "start",
+              "end",
+              "daysToReset"
+            ],
+            "additionalProperties": false
+          },
+          "annualMaxCents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "usedCents": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "remainingCents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "deductibleCents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "deductibleMetCents": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "orthoLifetime": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "maxCents": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "usedCents": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "maxCents",
+                  "usedCents"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "frequency": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "used": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "allowed": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "key",
+                "label",
+                "used",
+                "allowed"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "memberId",
+          "planYear",
+          "annualMaxCents",
+          "usedCents",
+          "remainingCents",
+          "deductibleCents",
+          "deductibleMetCents",
+          "orthoLifetime",
+          "frequency"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "visits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "memberId": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "procedureCode": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "billedCents": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "planPaidCents": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "youPaidCents": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "deductibleAppliedCents": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "app",
+              "sms"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "memberId",
+          "date",
+          "procedureCode",
+          "label",
+          "billedCents",
+          "planPaidCents",
+          "youPaidCents",
+          "deductibleAppliedCents",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "reminders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "const": "benefits_expiring"
+          },
+          "memberId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "sendOn": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "sent"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "memberId",
+          "title",
+          "body",
+          "sendOn",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "properties": {
+        "remindersOptIn": {
+          "type": "boolean"
+        },
+        "reminderDaysBefore": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "quietHours": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "string"
+            },
+            "end": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "remindersOptIn",
+        "reminderDaysBefore",
+        "quietHours"
+      ],
+      "additionalProperties": false
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system"
+            ]
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "app",
+              "sms",
+              "email"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "estimate"
+                    },
+                    "estimate": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "memberId": {
+                          "type": "string"
+                        },
+                        "tierId": {
+                          "type": "string"
+                        },
+                        "tierLabel": {
+                          "type": "string"
+                        },
+                        "date": {
+                          "type": "string"
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "procedureCode": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "coverageClass": {
+                                "type": "string",
+                                "enum": [
+                                  "preventive",
+                                  "basic",
+                                  "major",
+                                  "ortho"
+                                ]
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "covered",
+                                  "not_covered",
+                                  "incomplete"
+                                ]
+                              },
+                              "notCoveredReason": {
+                                "type": "string"
+                              },
+                              "billedCents": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "allowedCents": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "deductibleAppliedCents": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "planPaysCents": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "balanceBillCents": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "youPayCents": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "lines": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "step": {
+                                      "type": "string",
+                                      "enum": [
+                                        "eligibility",
+                                        "fee",
+                                        "deductible",
+                                        "insurer_rate",
+                                        "annual_max",
+                                        "balance_bill",
+                                        "patient"
+                                      ]
+                                    },
+                                    "amountCents": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "rule": {
+                                      "type": "string"
+                                    },
+                                    "why": {
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "type": "object",
+                                      "properties": {
+                                        "page": {
+                                          "anyOf": [
+                                            {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "quote": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "page"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": [
+                                    "step",
+                                    "amountCents",
+                                    "rule",
+                                    "why"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "procedureCode",
+                              "label",
+                              "coverageClass",
+                              "status",
+                              "billedCents",
+                              "allowedCents",
+                              "deductibleAppliedCents",
+                              "planPaysCents",
+                              "balanceBillCents",
+                              "youPayCents",
+                              "lines"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "totals": {
+                          "type": "object",
+                          "properties": {
+                            "billedCents": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "planPaysCents": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "youPayCents": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "billedCents",
+                            "planPaysCents",
+                            "youPayCents"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "remainingAnnualMaxAfterCents": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "assumptions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "computedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "memberId",
+                        "tierId",
+                        "tierLabel",
+                        "date",
+                        "items",
+                        "totals",
+                        "remainingAnnualMaxAfterCents",
+                        "assumptions",
+                        "computedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "estimate"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "sequence"
+                    },
+                    "sequence": {
+                      "type": "object",
+                      "properties": {
+                        "planYearEnds": {
+                          "type": "string"
+                        },
+                        "baseline": {
+                          "type": "object",
+                          "properties": {
+                            "steps": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "procedureCode": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "window": {
+                                    "type": "string",
+                                    "enum": [
+                                      "this_plan_year",
+                                      "next_plan_year"
+                                    ]
+                                  },
+                                  "estimate": {
+                                    "type": "object",
+                                    "properties": {
+                                      "procedureCode": {
+                                        "type": "string"
+                                      },
+                                      "label": {
+                                        "type": "string"
+                                      },
+                                      "coverageClass": {
+                                        "type": "string",
+                                        "enum": [
+                                          "preventive",
+                                          "basic",
+                                          "major",
+                                          "ortho"
+                                        ]
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "covered",
+                                          "not_covered",
+                                          "incomplete"
+                                        ]
+                                      },
+                                      "notCoveredReason": {
+                                        "type": "string"
+                                      },
+                                      "billedCents": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "allowedCents": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "deductibleAppliedCents": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "planPaysCents": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "balanceBillCents": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "youPayCents": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "lines": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "step": {
+                                              "type": "string",
+                                              "enum": [
+                                                "eligibility",
+                                                "fee",
+                                                "deductible",
+                                                "insurer_rate",
+                                                "annual_max",
+                                                "balance_bill",
+                                                "patient"
+                                              ]
+                                            },
+                                            "amountCents": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "rule": {
+                                              "type": "string"
+                                            },
+                                            "why": {
+                                              "type": "string"
+                                            },
+                                            "source": {
+                                              "type": "object",
+                                              "properties": {
+                                                "page": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "integer",
+                                                      "minimum": -9007199254740991,
+                                                      "maximum": 9007199254740991
+                                                    },
+                                                    {
+                                                      "type": "null"
+                                                    }
+                                                  ]
+                                                },
+                                                "quote": {
+                                                  "type": "string"
+                                                }
+                                              },
+                                              "required": [
+                                                "page"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          },
+                                          "required": [
+                                            "step",
+                                            "amountCents",
+                                            "rule",
+                                            "why"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "procedureCode",
+                                      "label",
+                                      "coverageClass",
+                                      "status",
+                                      "billedCents",
+                                      "allowedCents",
+                                      "deductibleAppliedCents",
+                                      "planPaysCents",
+                                      "balanceBillCents",
+                                      "youPayCents",
+                                      "lines"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "procedureCode",
+                                  "label",
+                                  "window",
+                                  "estimate"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "youPayCents": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "steps",
+                            "youPayCents"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "best": {
+                          "type": "object",
+                          "properties": {
+                            "steps": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "procedureCode": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "window": {
+                                    "type": "string",
+                                    "enum": [
+                                      "this_plan_year",
+                                      "next_plan_year"
+                                    ]
+                                  },
+                                  "estimate": {
+                                    "type": "object",
+                                    "properties": {
+                                      "procedureCode": {
+                                        "type": "string"
+                                      },
+                                      "label": {
+                                        "type": "string"
+                                      },
+                                      "coverageClass": {
+                                        "type": "string",
+                                        "enum": [
+                                          "preventive",
+                                          "basic",
+                                          "major",
+                                          "ortho"
+                                        ]
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "covered",
+                                          "not_covered",
+                                          "incomplete"
+                                        ]
+                                      },
+                                      "notCoveredReason": {
+                                        "type": "string"
+                                      },
+                                      "billedCents": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "allowedCents": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "deductibleAppliedCents": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "planPaysCents": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "balanceBillCents": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "youPayCents": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "lines": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "step": {
+                                              "type": "string",
+                                              "enum": [
+                                                "eligibility",
+                                                "fee",
+                                                "deductible",
+                                                "insurer_rate",
+                                                "annual_max",
+                                                "balance_bill",
+                                                "patient"
+                                              ]
+                                            },
+                                            "amountCents": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "rule": {
+                                              "type": "string"
+                                            },
+                                            "why": {
+                                              "type": "string"
+                                            },
+                                            "source": {
+                                              "type": "object",
+                                              "properties": {
+                                                "page": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "integer",
+                                                      "minimum": -9007199254740991,
+                                                      "maximum": 9007199254740991
+                                                    },
+                                                    {
+                                                      "type": "null"
+                                                    }
+                                                  ]
+                                                },
+                                                "quote": {
+                                                  "type": "string"
+                                                }
+                                              },
+                                              "required": [
+                                                "page"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          },
+                                          "required": [
+                                            "step",
+                                            "amountCents",
+                                            "rule",
+                                            "why"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "procedureCode",
+                                      "label",
+                                      "coverageClass",
+                                      "status",
+                                      "billedCents",
+                                      "allowedCents",
+                                      "deductibleAppliedCents",
+                                      "planPaysCents",
+                                      "balanceBillCents",
+                                      "youPayCents",
+                                      "lines"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "procedureCode",
+                                  "label",
+                                  "window",
+                                  "estimate"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "youPayCents": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "steps",
+                            "youPayCents"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "differenceCents": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "assumptions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "candidatesTried": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "planYearEnds",
+                        "baseline",
+                        "best",
+                        "differenceCents",
+                        "reasons",
+                        "assumptions",
+                        "candidatesTried"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "sequence"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "usage"
+                    },
+                    "memberId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "memberId"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "pending_action"
+                    },
+                    "action": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "record_visit",
+                            "email_transcript"
+                          ]
+                        },
+                        "previewText": {
+                          "type": "string"
+                        },
+                        "confirmToken": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "applied",
+                            "cancelled",
+                            "expired"
+                          ]
+                        },
+                        "expiresAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "previewText",
+                        "confirmToken",
+                        "status",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "delivery": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "sent",
+                  "delivered",
+                  "failed",
+                  "simulated"
+                ]
+              },
+              "at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "at"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "channel",
+          "text",
+          "cards",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "pendingActions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "record_visit",
+              "email_transcript"
+            ]
+          },
+          "previewText": {
+            "type": "string"
+          },
+          "confirmToken": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "applied",
+              "cancelled",
+              "expired"
+            ]
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "previewText",
+          "confirmToken",
+          "status",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "messaging": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "unlinked",
+            "awaiting_text",
+            "awaiting_confirmation",
+            "linked",
+            "opted_out"
+          ]
+        },
+        "maskedPhone": {
+          "type": "string"
+        },
+        "flossNumber": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "live",
+            "simulated"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "flossNumber",
+        "mode"
+      ],
+      "additionalProperties": false
+    },
+    "ai": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "available",
+            "degraded",
+            "off"
+          ]
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "revision",
+    "serverTime",
+    "user",
+    "household",
+    "plan",
+    "usage",
+    "visits",
+    "reminders",
+    "preferences",
+    "messages",
+    "pendingActions",
+    "messaging",
+    "ai"
+  ],
+  "additionalProperties": false
+}

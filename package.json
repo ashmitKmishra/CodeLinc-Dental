@@ -1,0 +1,13 @@
+{
+  "name": "floss",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "npm run dev -w @floss/web",
+    "build": "npm run build -w @floss/web",
+    "typecheck": "npm run typecheck -w @floss/contracts && npm run typecheck -w @floss/web",
+    "test": "npm run test -w @floss/contracts && npm run test -w @floss/web",
+    "schema": "npm run schema -w @floss/contracts"
+  }
+}
