@@ -44,7 +44,7 @@ export function AppShell() {
         </nav>
         <div className="mt-auto flex flex-col gap-3">
           <button type="button" onClick={() => setTextingOpen(true)} className="flex flex-col gap-0.5 rounded-md bg-shell-active p-3 text-left transition-colors hover:bg-shell-active/80">
-            <span className="flex items-center gap-2 t-small-strong text-shell-ink"><MessageSquare aria-hidden className="size-4" />{linked ? 'Texting linked' : 'Texting not linked'}<span aria-hidden className={cn('ml-auto size-2 rounded-full', linked ? 'bg-ok' : 'bg-shell-muted')} /></span>
+            <span className="flex items-center gap-2 t-small-strong text-shell-ink"><MessageSquare aria-hidden className="size-4" />{linked ? (data?.messaging.mode === 'live' ? 'WhatsApp connected' : 'Texting linked') : 'Texting not linked'}<span aria-hidden className={cn('ml-auto size-2 rounded-full', linked ? 'bg-ok' : 'bg-shell-muted')} /></span>
             <span className="t-small text-shell-muted">{linked ? data?.messaging.maskedPhone : 'Connect your phone'}</span>
           </button>
           {api.mode === 'mock' && <p className="px-1 t-small text-shell-muted">Sample household. Plan rules are from the plan document.</p>}

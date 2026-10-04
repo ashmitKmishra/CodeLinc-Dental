@@ -16,6 +16,8 @@ export const LiveUser = z.object({
 });
 export type LiveUser = z.infer<typeof LiveUser>;
 
+const maskPhone = (p: string) => (p.length > 10 ? `${p.slice(0, p.length - 10)} ••• ••• ${p.slice(-4)}` : `••• ${p.slice(-4)}`);
+
 export const toAuthUser = (u: LiveUser): AuthUser => ({ id: u.phone, name: u.name, email: '', phone: u.phone });
 
 const toMembers = (u: LiveUser): Member[] => [
@@ -81,6 +83,8 @@ export function createLiveApi(baseUrl: string): FlossApi {
         household: { id: user.phone, name: user.family.length ? `${members[0]!.firstName}’s family` : members[0]!.firstName, members },
         messages,
         pendingActions: [],
+        // The phone number is the account, so WhatsApp is already tied to it: there is no linking step.
+        messaging: { status: 'linked', maskedPhone: maskPhone(user.phone), flossNumber: '', mode: 'live' },
       };
     },
     sendTurn: (text, conversationId) => call('POST', '/v1/turns', z.object({ turnId: z.string(), conversationId: z.string() }), { text, ...(conversationId ? { conversationId } : {}) }),
