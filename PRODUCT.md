@@ -1,15 +1,11 @@
 # Product
 
-Floss is a family dental-benefits assistant you can text. It tells a plan holder, in dollars:
+Floss is a dental benefits assistant you can text. Your plan is already on file. Ask it what a procedure will cost, what your plan covers, and when to schedule care across the plan year, and it answers in plain words with the plan page each number came from.
 
-- what the plan pays and what the family pays for a recommended treatment;
-- when to schedule care around the plan-year reset so the family pays least;
-- whether their dentist is still in network.
+- **Users:** employees with a group dental plan, who aren't insurance experts and are often on a phone.
+- **Selling point:** an AI buddy one text away. Every chat is saved and the transcript can be emailed.
+- **App:** annual maximum used per family member, the plan in plain words, a cost breakdown (covered, owed, why), in-network vs out-of-network, best order across the plan year, reminders before benefits reset.
+- **Tone:** clear, calm, warm, honest about uncertainty. Big legible numbers.
+- **Must never:** diagnose, invent a price or a plan rule, or blur actual vs projected benefits. Absent plan facts say "not listed in your plan summary".
 
-It can also email the office to confirm price and appointment. The app and SMS share one history.
-
-- **Users:** employees with a group dental PPO covering a household. They aren't insurance experts and are often on a phone.
-- **Tone:** clear, calm, warm, honest about uncertainty. Big legible numbers; plain words ("Plan pays", "You pay", "Resets Jan 1").
-- **Must never:** diagnose, invent prices, or blur *actual* vs *projected* vs *pending* benefits.
-
-Full spec: `md-files/CONTEXT.md`. Demo data (the Rivera family, braces split across the reset): `md-files/CONTEXT.md` §6.
+Full brief: `md-files/BUILD-BRIEF.md`.

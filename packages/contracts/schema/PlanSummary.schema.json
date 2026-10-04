@@ -1,0 +1,654 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "carrier": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "planYear": {
+      "type": "object",
+      "properties": {
+        "startMonth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        },
+        "startDay": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "startMonth",
+        "startDay",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "sourceDocument": {
+      "type": "object",
+      "properties": {
+        "fileName": {
+          "type": "string"
+        },
+        "pages": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "fileName",
+        "pages"
+      ],
+      "additionalProperties": false
+    },
+    "tiers": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "in_network",
+              "out_of_network",
+              "any"
+            ]
+          },
+          "allowedBasis": {
+            "type": "string",
+            "enum": [
+              "contracted",
+              "usual_customary",
+              "percentile",
+              "nonparticipating_fee",
+              "unknown"
+            ]
+          },
+          "allowedNote": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "allowedBasis"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "classRules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "class": {
+            "type": "string",
+            "enum": [
+              "preventive",
+              "basic",
+              "major",
+              "ortho"
+            ]
+          },
+          "tierId": {
+            "type": "string"
+          },
+          "carrierLabel": {
+            "type": "string"
+          },
+          "examples": {
+            "type": "string"
+          },
+          "insurerRateBps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "deductibleApplies": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "countsTowardAnnualMax": {
+            "type": "boolean"
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "page"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "class",
+          "tierId",
+          "insurerRateBps",
+          "deductibleApplies",
+          "countsTowardAnnualMax"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "deductibles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tierId": {
+            "type": "string"
+          },
+          "individualCents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "familyCents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "page"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "tierId",
+          "individualCents",
+          "familyCents"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "annualMax": {
+      "type": "object",
+      "properties": {
+        "amountCents": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "appliesToClasses": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "preventive",
+              "basic",
+              "major",
+              "ortho"
+            ]
+          }
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "quote": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "page"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "amountCents",
+        "appliesToClasses"
+      ],
+      "additionalProperties": false
+    },
+    "orthoMax": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "lifetime",
+            "annual",
+            "none"
+          ]
+        },
+        "childCents": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "adultCents": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "childAgeLimit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "adultsCovered": {
+          "type": "boolean"
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "quote": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "page"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "type",
+        "childCents",
+        "adultCents",
+        "childAgeLimit",
+        "adultsCovered"
+      ],
+      "additionalProperties": false
+    },
+    "frequencyLimits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "maxCount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "calendar_year",
+              "benefit_year",
+              "months",
+              "lifetime"
+            ]
+          },
+          "months": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ageUnder": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "page"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "maxCount",
+          "period",
+          "months",
+          "ageUnder"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "waitingPeriods": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "class": {
+            "type": "string",
+            "enum": [
+              "preventive",
+              "basic",
+              "major",
+              "ortho"
+            ]
+          },
+          "months": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "page"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "class",
+          "months"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "dependentAgeLimit": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "age": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "studentAge": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "age",
+            "studentAge"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "procedureClassOverrides": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "enum": [
+          "preventive",
+          "basic",
+          "major",
+          "ortho"
+        ]
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "plain": {
+            "type": "string"
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "page"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "title",
+          "plain"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "isSynthetic": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "carrier",
+    "name",
+    "planYear",
+    "sourceDocument",
+    "tiers",
+    "classRules",
+    "deductibles",
+    "annualMax",
+    "orthoMax",
+    "frequencyLimits",
+    "waitingPeriods",
+    "dependentAgeLimit",
+    "procedureClassOverrides",
+    "notes",
+    "isSynthetic"
+  ],
+  "additionalProperties": false
+}
