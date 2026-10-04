@@ -1,6 +1,6 @@
 # Creates the Cognito users who may sign in, from scripts/cognito_users.local.json (git-ignored; format in the .example file).
 # Sign-in is phone number + password. Invitations are suppressed, so nobody is texted or emailed. A new user gets a random password that is
-# never shown or stored; add a "password" field to someone's entry to set theirs (12+ characters with upper, lower and a number).
+# never shown or stored; add a "password" field to someone's entry to set theirs (8+ characters with upper, lower and a number).
 # Existing users keep their password unless their entry has a "password". Safe to rerun.
 # Run: AWS_PROFILE=workshop uv run --with boto3 python scripts/create_cognito_users.py
 import json, os, secrets, boto3

@@ -97,7 +97,7 @@ Resources:
       DeletionProtection: INACTIVE
       AdminCreateUserConfig: {AllowAdminCreateUserOnly: true}
       Policies:
-        PasswordPolicy: {MinimumLength: 12, RequireLowercase: true, RequireUppercase: true, RequireNumbers: true, RequireSymbols: false}
+        PasswordPolicy: {MinimumLength: 8, RequireLowercase: true, RequireUppercase: true, RequireNumbers: true, RequireSymbols: false}
         SignInPolicy: {AllowedFirstAuthFactors: [PASSWORD]}
 
   UserPoolClient:
