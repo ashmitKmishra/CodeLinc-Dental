@@ -42,7 +42,7 @@ export default function Overview() {
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <section aria-label={solo ? 'Your annual maximum' : 'Annual maximum by person'} className="flex min-w-0 flex-col gap-3">
           <h2 className="t-h2">{solo ? 'Your annual maximum' : 'Annual maximum, by person'}</h2>
-          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr))]">
+          <div className="flex flex-col gap-4">
             {cards.map(({ m, i, u }) => <MemberUsageCard key={m.id} member={m} index={i} usage={u} />)}
           </div>
         </section>
