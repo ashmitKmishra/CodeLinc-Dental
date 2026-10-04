@@ -8,7 +8,7 @@
 
 <!-- Replace the placeholder PNGs in docs/screenshots/ with real captures. Keep the file names. -->
 
-Demo video: _link goes here_
+Floss Dental Care
 
 ## The problem
 
@@ -86,13 +86,7 @@ Chat. Floss answers from the patient's own treatment rows, with every dollar fig
 
 Dashboard. Annual maximum used and left per family member, reminders, and the plan on file.
 
-![Texting](docs/screenshots/texting.png)
 
-Texting (sample-data mode). Link a phone with a one-time code. The live site does not offer this yet.
-
-![Phone view](docs/screenshots/mobile.png)
-
-The same screens on a phone.
 
 ## What it does
 
