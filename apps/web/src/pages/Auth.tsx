@@ -3,7 +3,9 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { Wordmark } from '@/components/floss/Wordmark';
-import { signInMock, useAuthUser } from '@/lib/authStore';
+import { signInMock, signInWithToken, useAuthUser } from '@/lib/authStore';
+import { errorMessage } from '@/lib/hooks';
+import { FlossApiError, isLive, liveAuth, toAuthUser } from '@/lib/api';
 
 function AuthLayout({ title, subtitle, children, footer }: { title: string; subtitle: string; children: React.ReactNode; footer: React.ReactNode }) {
   return (
@@ -57,10 +59,50 @@ function useAuthForm(kind: 'signin' | 'signup') {
   return { name, setName, email, setEmail, password, setPassword, errors, busy, submit };
 }
 
+/** Live mode: phone number + password, checked by Amazon Cognito. Accounts are created by your benefits team, so there is no sign-up. */
+function PhoneSignIn() {
+  const nav = useNavigate();
+  const loc = useLocation();
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
+  const [busy, setBusy] = useState(false);
+  const e164 = (v: string) => { const d = v.replace(/[^\d+]/g, ''); return d.startsWith('+') ? d : d.length === 10 ? `+1${d}` : `+${d}`; };
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const next: typeof errors = {};
+    if (!/^\+[1-9]\d{9,14}$/.test(e164(phone))) next.phone = 'Enter your mobile number with its country code.';
+    if (!password) next.password = 'Enter your password.';
+    setErrors(next);
+    if (Object.keys(next).length) return;
+    setBusy(true);
+    try {
+      const r = await liveAuth.signIn(e164(phone), password);
+      signInWithToken(toAuthUser(r.user), r.token);
+      nav((loc.state as { from?: string } | null)?.from ?? '/app', { replace: true });
+    } catch (err) {
+      const k = err instanceof FlossApiError ? err.code : '';
+      setErrors({ password: k === 'NotAuthorizedException' || k === 'UserNotFoundException' ? 'That number or password isn’t right.'
+        : k === 'TooManyRequestsException' || k === 'LimitExceededException' ? 'Too many tries. Wait a few minutes and try again.' : errorMessage(err) });
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-5">
+      <Input label="Mobile number" type="tel" autoComplete="username" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} error={errors.phone} />
+      <Input label="Password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} error={errors.password} />
+      <Button type="submit" size="lg" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</Button>
+    </form>
+  );
+}
+
 export function SignUp() {
   const user = useAuthUser();
   const f = useAuthForm('signup');
   if (user) return <Navigate to="/app" replace />;
+  if (isLive) return <Navigate to="/signin" replace />;
   return (
     <AuthLayout title="Create your account" subtitle="Use your work email. Your plan is already on file." footer={<>Already have an account? <Link to="/signin" className="font-semibold text-brand underline-offset-2 hover:underline">Sign in</Link></>}>
       <form onSubmit={f.submit} noValidate className="flex flex-col gap-5">
@@ -77,6 +119,11 @@ export function SignIn() {
   const user = useAuthUser();
   const f = useAuthForm('signin');
   if (user) return <Navigate to="/app" replace />;
+  if (isLive) return (
+    <AuthLayout title="Sign in" subtitle="Use the mobile number on your dental plan and your password." footer="Your employer added you to Floss. If your number isn’t recognized, ask your benefits team.">
+      <PhoneSignIn />
+    </AuthLayout>
+  );
   return (
     <AuthLayout title="Sign in" subtitle="Welcome back. Your plan is waiting." footer={<>New to Floss? <Link to="/signup" className="font-semibold text-brand underline-offset-2 hover:underline">Create an account</Link></>}>
       <form onSubmit={f.submit} noValidate className="flex flex-col gap-5">

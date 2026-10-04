@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: CodeLinc dental RAG Lambda in the RDS VPC, reaching Bedrock through a VPC endpoint
+Description: CodeLinc dental API - Cognito password sign-in, HTTP API Gateway (JWT authorizer) -> Lambda in the RDS VPC (chat history, Bedrock RAG via a VPC endpoint)
 
 Parameters:
   VpcId: {Type: AWS::EC2::VPC::Id}
@@ -11,6 +11,8 @@ Parameters:
   CodeBucket: {Type: String}
   CodeKey: {Type: String}
   ModelId: {Type: String, Default: 'us.anthropic.claude-haiku-4-5-20251001-v1:0'}
+  DbUser: {Type: String, Default: api_app, Description: 'IAM-auth Postgres role the Lambda logs in as (db/04_users_chat.sql)'}
+  AllowedOrigins: {Type: CommaDelimitedList, Default: 'https://d3unrkn8gkr6mk.cloudfront.net,http://127.0.0.1:5173,http://localhost:5173', Description: CORS origins for the web app}
 
 Resources:
   LambdaSg:
@@ -64,7 +66,7 @@ Resources:
                   - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*
               - Effect: Allow
                 Action: [rds-db:connect]
-                Resource: !Sub arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${DbiResourceId}/api_reader
+                Resource: !Sub arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${DbiResourceId}/${DbUser}
 
   Function:
     Type: AWS::Lambda::Function
@@ -82,7 +84,93 @@ Resources:
         SubnetIds: !Ref SubnetIds
         SecurityGroupIds: [!Ref LambdaSg]
       Environment:
-        Variables: {DB_HOST: !Ref DbHost, DB_PORT: !Ref DbPort, DB_USER: api_reader, MODEL_ID: !Ref ModelId}
+        Variables: {DB_HOST: !Ref DbHost, DB_PORT: !Ref DbPort, DB_USER: !Ref DbUser, MODEL_ID: !Ref ModelId}
+
+  # Sign in with phone number + password (Cognito checks it over TLS). Admin-create only: nobody can self-register.
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: codelinc-dental
+      UserPoolTier: ESSENTIALS
+      UsernameAttributes: [phone_number]
+      MfaConfiguration: 'OFF'
+      DeletionProtection: INACTIVE
+      AdminCreateUserConfig: {AllowAdminCreateUserOnly: true}
+      Policies:
+        PasswordPolicy: {MinimumLength: 8, RequireLowercase: true, RequireUppercase: true, RequireNumbers: true, RequireSymbols: false}
+        SignInPolicy: {AllowedFirstAuthFactors: [PASSWORD]}
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: codelinc-dental-web
+      GenerateSecret: false
+      ExplicitAuthFlows: [ALLOW_USER_PASSWORD_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      TokenValidityUnits: {AccessToken: hours, IdToken: hours, RefreshToken: days}
+      AccessTokenValidity: 24
+      IdTokenValidity: 24
+      RefreshTokenValidity: 7
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: codelinc-dental-api
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins: !Ref AllowedOrigins
+        AllowMethods: [GET, POST, OPTIONS]
+        AllowHeaders: [authorization, content-type, accept, idempotency-key]
+        MaxAge: 600
+
+  Integration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt Function.Arn
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 29000
+
+  # Explicit routes, so OPTIONS preflights are answered by the API's CORS config and never reach the Lambda.
+  # Every route needs a valid Cognito ID token; there are no unauthenticated routes.
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref HttpApi
+      Name: cognito-id-token
+      AuthorizerType: JWT
+      IdentitySource: ['$request.header.Authorization']
+      JwtConfiguration:
+        Audience: [!Ref UserPoolClient]
+        Issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}'
+
+  RouteMe: {Type: AWS::ApiGatewayV2::Route, Properties: {ApiId: !Ref HttpApi, RouteKey: 'GET /v1/me', AuthorizationType: JWT, AuthorizerId: !Ref JwtAuthorizer, Target: !Sub 'integrations/${Integration}'}}
+  RouteConversations: {Type: AWS::ApiGatewayV2::Route, Properties: {ApiId: !Ref HttpApi, RouteKey: 'GET /v1/conversations', AuthorizationType: JWT, AuthorizerId: !Ref JwtAuthorizer, Target: !Sub 'integrations/${Integration}'}}
+  RouteMessages: {Type: AWS::ApiGatewayV2::Route, Properties: {ApiId: !Ref HttpApi, RouteKey: 'GET /v1/messages', AuthorizationType: JWT, AuthorizerId: !Ref JwtAuthorizer, Target: !Sub 'integrations/${Integration}'}}
+  RouteTurns: {Type: AWS::ApiGatewayV2::Route, Properties: {ApiId: !Ref HttpApi, RouteKey: 'POST /v1/turns', AuthorizationType: JWT, AuthorizerId: !Ref JwtAuthorizer, Target: !Sub 'integrations/${Integration}'}}
+  RouteTurn: {Type: AWS::ApiGatewayV2::Route, Properties: {ApiId: !Ref HttpApi, RouteKey: 'GET /v1/turns/{id}', AuthorizationType: JWT, AuthorizerId: !Ref JwtAuthorizer, Target: !Sub 'integrations/${Integration}'}}
+
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+      DefaultRouteSettings: {ThrottlingBurstLimit: 20, ThrottlingRateLimit: 10}
+
+  ApiInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Function
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*
 
 Outputs:
   FunctionName: {Value: !Ref Function}
+  UserPoolId: {Value: !Ref UserPool}
+  UserPoolClientId: {Value: !Ref UserPoolClient, Description: 'Set VITE_COGNITO_CLIENT_ID to this'}
+  ApiUrl: {Value: !GetAtt HttpApi.ApiEndpoint, Description: 'Set VITE_API_BASE_URL to this'}

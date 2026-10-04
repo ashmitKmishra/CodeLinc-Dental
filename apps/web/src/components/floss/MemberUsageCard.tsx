@@ -24,7 +24,7 @@ export function MemberUsageCard({ member, index, usage, className }: { member: M
         <Avatar name={member.firstName} index={index} size={40} />
         <div className="min-w-0">
           <h3 className="t-h3 truncate">{member.firstName}</h3>
-          <p className="t-small text-ink-muted">{relation[member.relationship]}{member.relationship === 'child' ? ` · ${age}` : ''}</p>
+          <p className="t-small text-ink-muted">{relation[member.relationship]}{member.relationship === 'child' ? ` · ${age}` : ''}{member.memberNumber ? ` · ID ${member.memberNumber}` : ''}</p>
         </div>
       </header>
 
