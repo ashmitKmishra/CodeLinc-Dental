@@ -42,7 +42,7 @@ A password needs 8 or more characters with an upper-case letter, a lower-case le
 
 ## What you can do on the site
 
-- **Chat**: answers come from your own treatment rows only, with every dollar figure checked against those rows. Use **History** to switch between app chats and WhatsApp Messenger, or start a **New chat**. Every message is saved.
+- **Chat**: a friendly advocate that speaks to you as the employee and about your spouse and children by name. One model call picks what you asked about, code looks up the stored estimates and does the arithmetic, and a second call writes the reply; every dollar figure and contact detail is checked against the stored data. It points you to the hospital to confirm anything it does not have and offers to draft the email. Use **History** to switch between app chats and WhatsApp Messenger, or start a **New chat**. Every message is saved.
 - **Overview**: your household and the Lincoln sample plan. Plan rules and usage are still sample data; the backend does not serve them yet.
 - Not available yet: linking a phone for texting, confirming actions, and emailing a transcript. WhatsApp history is empty because nothing sends WhatsApp messages yet.
 
@@ -58,7 +58,7 @@ Browser ──HTTPS──> CloudFront ──> private S3 bucket          (stack 
 ```
 
 - Redeploy the website after a front-end change: `./scripts/deploy_web.sh` (needs Node and the `workshop` profile).
-- Redeploy the API after a Lambda or template change: zip `backend/rag/handler.py` with `rds-global-bundle.pem` and `pg8000`, upload to the data bucket, then `aws cloudformation deploy` (steps in `md-files/backend-record.md`).
+- Redeploy the API after a Lambda or template change: `./backend/rag/deploy.sh` (needs the `workshop` profile). Offline tests: `python3 -m unittest backend/rag/test_advisor.py`.
 - Database changes need the admin login, which is only available through `asm-exec` (see the header of `scripts/load_users_chat.py`).
 - TLS: API Gateway, Cognito and the database connection require TLS 1.2 or newer. CloudFront's default address still accepts older versions; fixing that needs a custom domain.
 
