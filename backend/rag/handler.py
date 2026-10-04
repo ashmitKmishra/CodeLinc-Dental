@@ -158,20 +158,25 @@ def _store_exchange(conn, phone, cid, channel, text, time_left=None):
     return answer, rid
 
 
-def _post_turn(conn, phone, body):
+def _post_turn(conn, event, phone, body):
     text = str(body.get("text", "")).strip()
     if not text or len(text) > 500:
         raise ApiErr(400, "invalid_request", "Type a message first (max 500 characters).")
+    # Browsers always come through API Gateway and are always "app". The WhatsApp/SMS bot invokes this Lambda directly (no
+    # domainName in the event) and says which channel the text arrived on, so its threads are tagged and continued correctly.
+    channel = "app"
+    if "domainName" not in event.get("requestContext", {}) and body.get("channel") in ("whatsapp", "sms"):
+        channel = body["channel"]
     cid = body.get("conversationId")
-    if cid:  # continuing a thread: it must be this person's own in-app thread (WhatsApp threads are read-only here)
+    if cid:  # continuing a thread: it must be this person's own thread on the same channel (WhatsApp threads are read-only in the app)
         _uuid_or_404(cid)
-        rows = conn.run("SELECT 1 FROM chat_messages WHERE phone = :p AND conversation_id = CAST(:c AS uuid) AND channel = 'app' LIMIT 1",
-                        p=phone, c=cid)
+        rows = conn.run("SELECT 1 FROM chat_messages WHERE phone = :p AND conversation_id = CAST(:c AS uuid) AND channel = :ch LIMIT 1",
+                        p=phone, c=cid, ch=channel)
         if not rows:
             raise ApiErr(400, "invalid_request", "That conversation can't be continued here. Start a new chat instead.")
     else:
         cid = str(uuid.uuid4())
-    _, rid = _store_exchange(conn, phone, cid, "app", text)
+    _, rid = _store_exchange(conn, phone, cid, channel, text)
     return 200, {"turnId": str(rid), "conversationId": cid}
 
 
@@ -282,7 +287,7 @@ def _route(conn, event, method, path, query, body):
     if method == "GET" and path == "/v1/messages":
         return _list_messages(conn, phone, query)
     if method == "POST" and path == "/v1/turns":
-        return _post_turn(conn, phone, body)
+        return _post_turn(conn, event, phone, body)
     if method == "GET" and path.startswith("/v1/turns/"):
         return _get_turn(conn, phone, path[len("/v1/turns/"):])
     raise ApiErr(404, "not_found", "No such endpoint.")

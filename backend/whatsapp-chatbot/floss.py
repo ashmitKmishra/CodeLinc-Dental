@@ -53,7 +53,7 @@ def profile(phone):
 
 def ask(phone, text, conversation_id=None):
     """Return (reply, conversation_id). Continues conversation_id when it is still valid. Raises NotMember."""
-    body = {"text": text[:500]}
+    body = {"text": text[:500], "channel": "whatsapp" if phone.startswith("whatsapp:") else "sms"}
     try:
         turn = _invoke(phone, "POST", "/v1/turns", {**body, "conversationId": conversation_id} if conversation_id else body)
     except RuntimeError:
