@@ -1,8 +1,8 @@
 # Floss
 
-Floss answers an employee's dental benefits questions on WhatsApp and in a web app: what a procedure will cost, what the plan covers, and when to get care before the plan year resets. Built for codeLinc 11 (Lincoln Financial), Path 1.
+**To run the project:** open https://d3unrkn8gkr6mk.cloudfront.net and sign in with the mobile number `+17739986828` and the password `Ashwani123`.
 
-**Live site: https://d3unrkn8gkr6mk.cloudfront.net**
+Floss answers an employee's dental benefits questions on WhatsApp and in a web app: what a procedure will cost, what the plan covers, and when to get care before the plan year resets. Built for codeLinc 11 (Lincoln Financial), Path 1.
 
 ![Floss landing page](docs/screenshots/hero.png)
 
@@ -36,13 +36,13 @@ Ask for a plan summary, or get a reminder before benefits reset.
 
 ![Floss architecture](docs/architecture/architecture.svg)
 
-The editable source is [`architecture.drawio`](docs/architecture/architecture.drawio). Open it at [diagrams.net](https://app.diagrams.net), edit, and export as SVG over `architecture.svg`. Steps 1 to 4 are marked on the diagram.
+
 
 1. The person signs in with Amazon Cognito and asks in the web app. WhatsApp messages come in through a signed Twilio webhook on the same API.
 2. API Gateway checks the JWT (or Twilio's signature) and hands the request to the API Lambda.
 3. The Lambda takes the phone number from the verified token, never from the request. It replays the last 20 messages as context and searches pgvector for that person's rows.
-4. Bedrock does the language work. One Claude Haiku 4.5 call picks the person and treatment. Code then looks up the stored estimates and does the arithmetic. A second call writes the reply from those facts. Titan Text Embeddings v2 handles the search.
-5. Every dollar figure, email address, phone number and link in the reply must be one of the facts. If one isn't, the writer gets one retry, and after that code writes the reply. The Lambda saves both messages and returns the answer.
+4. Bedrock does the language work. 
+
 
 In the diagram, WhatsApp goes through the signed route on the API. Today the bot Lambda in `backend/whatsapp-chatbot` sits in step 1 instead and calls the RAG function directly. The route on the branch above would move it onto the API.
 
@@ -71,7 +71,7 @@ The stored estimates use a simple allowed amount (80% of the cash price). The ad
 
 ## Try it
 
-On the live site, sign in with the mobile number on your plan and your password (ask Ashwani for one). Open **Chat** and ask `How much are braces in network?`, then `and for my son?`. For WhatsApp, message Floss from a registered phone (ask Ashar for the sandbox join code).
+On the live site, sign in with the account at the top of this page. Open **Chat** and ask `How much are braces in network?`, then `and for my son?`. For WhatsApp, message Floss from a registered phone (ask Ashar for the sandbox join code).
 
 To run it on your machine with sample data and no backend, you need Node 20.19 or newer:
 
