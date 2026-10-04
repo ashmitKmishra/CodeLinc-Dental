@@ -1,12 +1,10 @@
 import type { PlanSummary, Snapshot } from '@floss/contracts';
-import { BellRing, FileText, Mail } from 'lucide-react';
+import { BellRing, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/Button';
 import { Chip, SourceChip } from '@/components/ui/Chip';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
 import { Switch } from '@/components/ui/Switch';
 import { api } from '@/lib/api';
-import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/format';
 import { errorMessage, useAction } from '@/lib/hooks';
 
@@ -61,23 +59,6 @@ export function PlanOnFilePanel({ plan, className }: { plan: PlanSummary; classN
         <SourceChip label={plan.sourceDocument.fileName} className="w-fit max-w-full break-all" />
         <p className="t-small text-ink-muted">{plan.sourceDocument.pages} {plan.sourceDocument.pages === 1 ? 'page' : 'pages'} read from your plan document</p>
       </div>
-    </Panel>
-  );
-}
-
-export function TranscriptPanel({ email, hasMessages, className }: { email: string; hasMessages: boolean; className?: string }) {
-  const send = useAction(() => api.requestTranscript());
-  return (
-    <Panel aria-label="Chat transcript" className={className}>
-      <PanelHeader title="Chat transcript" icon={<Mail aria-hidden className="size-5 text-brand" />} />
-      <div className={cn('flex flex-wrap items-center justify-between gap-4 border-t border-line px-5 py-4')}>
-        <div className="min-w-[200px] flex-1">
-          <p className="t-body-strong">Email me a copy of my chats</p>
-          <p className="t-small text-ink-muted">Sent to {email}. Includes messages from the app and by text.</p>
-        </div>
-        <Button variant="secondary" disabled={send.isPending || !hasMessages} onClick={() => send.mutate(undefined, { onSuccess: () => toast.success(`Transcript sent to ${email}`), onError: (e) => toast.error(errorMessage(e)) })}>{send.isPending ? 'Sending…' : 'Email transcript'}</Button>
-      </div>
-      {!hasMessages && <p className="border-t border-line px-5 py-3 t-small text-ink-muted">No messages yet. Start a chat and you can email it to yourself.</p>}
     </Panel>
   );
 }
