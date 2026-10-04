@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1530 870" width="1530" height="870" font-family="Inter, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0A3D42"/></marker></defs>
+<rect width="1530" height="870" fill="#FFFFFF"/>
+<text x="30" y="40" font-size="22" font-weight="700" fill="#10282D">Floss architecture</text>
+<text x="30" y="62" font-size="13" fill="#4F6468">The web app and WhatsApp share one REST API. Numbers match the request path in the README.</text>
+<rect x="30" y="90" width="250" height="710" rx="14" fill="#F7FAFA" stroke="#DCE6E7"/>
+<text x="46" y="116" font-size="13" font-weight="700" fill="#4F6468" letter-spacing="0.5">Channels</text>
+<rect x="310" y="90" width="250" height="710" rx="14" fill="#F7FAFA" stroke="#DCE6E7"/>
+<text x="326" y="116" font-size="13" font-weight="700" fill="#4F6468" letter-spacing="0.5">Identity and security</text>
+<rect x="590" y="90" width="290" height="710" rx="14" fill="#F7FAFA" stroke="#DCE6E7"/>
+<text x="606" y="116" font-size="13" font-weight="700" fill="#4F6468" letter-spacing="0.5">REST API</text>
+<rect x="910" y="90" width="260" height="710" rx="14" fill="#F7FAFA" stroke="#DCE6E7"/>
+<text x="926" y="116" font-size="13" font-weight="700" fill="#4F6468" letter-spacing="0.5">AI</text>
+<rect x="1190" y="90" width="310" height="710" rx="14" fill="#F7FAFA" stroke="#DCE6E7"/>
+<text x="1206" y="116" font-size="13" font-weight="700" fill="#4F6468" letter-spacing="0.5">Data</text>
+<rect x="50" y="140" width="210" height="150" rx="10" fill="#E3F1F2" stroke="#0A3D42" stroke-width="1.6"/>
+<text x="64" y="166" font-size="15" font-weight="700" fill="#10282D">Floss web app</text>
+<text x="64" y="188" font-size="12.5" fill="#4F6468">Plan holder on the web</text>
+<text x="64" y="205" font-size="12.5" fill="#4F6468">React 19, Vite, TypeScript</text>
+<text x="64" y="222" font-size="12.5" fill="#4F6468">Hosted on CloudFront + S3</text>
+<text x="64" y="239" font-size="12.5" fill="#4F6468">HTTPS only</text>
+<rect x="50" y="330" width="210" height="150" rx="10" fill="#E3F1F2" stroke="#0A3D42" stroke-width="1.6"/>
+<text x="64" y="356" font-size="15" font-weight="700" fill="#10282D">WhatsApp via Twilio</text>
+<text x="64" y="378" font-size="12.5" fill="#4F6468">Plan holder on WhatsApp</text>
+<text x="64" y="395" font-size="12.5" fill="#4F6468">Ask in any language</text>
+<text x="64" y="412" font-size="12.5" fill="#4F6468">Encrypted end to end by</text>
+<text x="64" y="429" font-size="12.5" fill="#4F6468">WhatsApp, phone to Twilio</text>
+<rect x="330" y="140" width="210" height="100" rx="10" fill="#FFF1D6" stroke="#B7791F" stroke-width="1.6"/>
+<text x="344" y="166" font-size="15" font-weight="700" fill="#10282D">Amazon Cognito</text>
+<text x="344" y="188" font-size="12.5" fill="#4F6468">User pool: phone + password</text>
+<text x="344" y="205" font-size="12.5" fill="#4F6468">Accounts created by the team</text>
+<text x="344" y="222" font-size="12.5" fill="#4F6468">Issues the ID token (JWT)</text>
+<rect x="330" y="430" width="210" height="360" rx="10" fill="#FFFBF1" stroke="#B7791F" stroke-width="1.6" stroke-dasharray="2 4"/>
+<text x="344" y="456" font-size="15" font-weight="700" fill="#10282D">Security controls</text>
+<text x="344" y="478" font-size="12.5" fill="#4F6468">JWT checked on every /v1</text>
+<text x="344" y="495" font-size="12.5" fill="#4F6468">app route</text>
+<text x="344" y="512" font-size="12.5" fill="#4F6468">Twilio signature checked on</text>
+<text x="344" y="529" font-size="12.5" fill="#4F6468">the WhatsApp webhook</text>
+<text x="344" y="546" font-size="12.5" fill="#4F6468">WhatsApp accepted only from</text>
+<text x="344" y="563" font-size="12.5" fill="#4F6468">a number that has an account</text>
+<text x="344" y="580" font-size="12.5" fill="#4F6468">Phone comes from the token,</text>
+<text x="344" y="597" font-size="12.5" fill="#4F6468">never from the request</text>
+<text x="344" y="614" font-size="12.5" fill="#4F6468">Each patient reads only the</text>
+<text x="344" y="631" font-size="12.5" fill="#4F6468">rows for their own phone</text>
+<text x="344" y="648" font-size="12.5" fill="#4F6468">IAM database auth, no</text>
+<text x="344" y="665" font-size="12.5" fill="#4F6468">stored passwords</text>
+<text x="344" y="682" font-size="12.5" fill="#4F6468">TLS 1.2+ to API, Cognito</text>
+<text x="344" y="699" font-size="12.5" fill="#4F6468">and database</text>
+<text x="344" y="716" font-size="12.5" fill="#4F6468">RDS encrypted at rest</text>
+<text x="344" y="733" font-size="12.5" fill="#4F6468">Bedrock over a private</text>
+<text x="344" y="750" font-size="12.5" fill="#4F6468">VPC endpoint</text>
+<text x="344" y="767" font-size="12.5" fill="#4F6468">CloudFront: HSTS and CSP</text>
+<rect x="610" y="140" width="250" height="300" rx="10" fill="#FFFFFF" stroke="#0A3D42" stroke-width="1.6"/>
+<text x="624" y="166" font-size="15" font-weight="700" fill="#10282D">Amazon API Gateway</text>
+<text x="624" y="188" font-size="12.5" fill="#4F6468">REST-style HTTP API, /v1</text>
+<text x="624" y="205" font-size="12.5" fill="#4F6468">Cognito JWT authorizer on</text>
+<text x="624" y="222" font-size="12.5" fill="#4F6468">every app route</text>
+<text x="624" y="239" font-size="12.5" fill="#4F6468">Signed webhook route for</text>
+<text x="624" y="256" font-size="12.5" fill="#4F6468">Twilio</text>
+<text x="624" y="273" font-size="12.5" fill="#4F6468">Throttled to 10 requests/s</text>
+<text x="624" y="290" font-size="12.5" fill="#4F6468">Contract: packages/contracts</text>
+<text x="624" y="307" font-size="12.5" fill="#4F6468"></text>
+<text x="624" y="324" font-size="12.5" fill="#4F6468">About a 29 s limit per call</text>
+<rect x="610" y="480" width="250" height="190" rx="10" fill="#FFFFFF" stroke="#0A3D42" stroke-width="1.6"/>
+<text x="624" y="506" font-size="15" font-weight="700" fill="#10282D">API Lambda</text>
+<text x="624" y="528" font-size="12.5" fill="#4F6468">Verified phone from the JWT</text>
+<text x="624" y="545" font-size="12.5" fill="#4F6468">Replays the last 20 messages</text>
+<text x="624" y="562" font-size="12.5" fill="#4F6468">Picks the person and treatment,</text>
+<text x="624" y="579" font-size="12.5" fill="#4F6468">looks up stored estimates,</text>
+<text x="624" y="596" font-size="12.5" fill="#4F6468">does the math in code</text>
+<text x="624" y="613" font-size="12.5" fill="#4F6468">Writes the reply; drops any $,</text>
+<text x="624" y="630" font-size="12.5" fill="#4F6468">email or phone not in the facts</text>
+<text x="624" y="647" font-size="12.5" fill="#4F6468">Emails the chat transcript</text>
+<rect x="610" y="700" width="250" height="90" rx="10" fill="#FFFFFF" stroke="#0A3D42" stroke-width="1.6"/>
+<text x="624" y="726" font-size="15" font-weight="700" fill="#10282D">Cost engine</text>
+<text x="624" y="748" font-size="12.5" fill="#4F6468">Integer-cents math from the</text>
+<text x="624" y="765" font-size="12.5" fill="#4F6468">plan rules. The model never</text>
+<text x="624" y="782" font-size="12.5" fill="#4F6468">does arithmetic.</text>
+<rect x="940" y="480" width="210" height="110" rx="10" fill="#E4F3EA" stroke="#1F7A4D" stroke-width="1.6"/>
+<text x="954" y="506" font-size="15" font-weight="700" fill="#10282D">Amazon Bedrock</text>
+<text x="954" y="528" font-size="12.5" fill="#4F6468">Titan Text Embeddings v2</text>
+<text x="954" y="545" font-size="12.5" fill="#4F6468">Claude Haiku 4.5</text>
+<text x="954" y="562" font-size="12.5" fill="#4F6468">Private VPC endpoint</text>
+<rect x="1210" y="460" width="270" height="200" rx="10" fill="#E8EEF9" stroke="#3A5BA0" stroke-width="1.6"/>
+<text x="1224" y="486" font-size="15" font-weight="700" fill="#10282D">Postgres + pgvector</text>
+<text x="1224" y="508" font-size="12.5" fill="#4F6468">Amazon RDS, 1024-dim vectors</text>
+<text x="1224" y="525" font-size="12.5" fill="#4F6468">Users, family, chat_messages</text>
+<text x="1224" y="542" font-size="12.5" fill="#4F6468">Treatment rows, hospitals, costs</text>
+<text x="1224" y="559" font-size="12.5" fill="#4F6468">Hospital contacts, plan PDF chunks</text>
+<rect x="1210" y="690" width="270" height="100" rx="10" fill="#E8EEF9" stroke="#3A5BA0" stroke-width="1.6"/>
+<text x="1224" y="716" font-size="15" font-weight="700" fill="#10282D">Plan data</text>
+<text x="1224" y="738" font-size="12.5" fill="#4F6468">Carrier PDFs in Amazon S3,</text>
+<text x="1224" y="755" font-size="12.5" fill="#4F6468">parsed into PlanSummary tables</text>
+<text x="1224" y="772" font-size="12.5" fill="#4F6468">with the PDF page for each rule.</text>
+<rect x="1210" y="140" width="270" height="290" rx="10" fill="#0A3D42"/>
+<text x="1224" y="166" font-size="15" font-weight="700" fill="#F2B544">Key ideas</text>
+<text x="1224" y="194" font-size="13.5" font-weight="700" fill="#FFFFFF">RAG</text><text x="1224" y="210" font-size="12" fill="#C9DEDF">Answers come from retrieved rows</text>
+<text x="1224" y="232" font-size="13.5" font-weight="700" fill="#FFFFFF">Context</text><text x="1224" y="248" font-size="12" fill="#C9DEDF">Chat history goes into every turn</text>
+<text x="1224" y="270" font-size="13.5" font-weight="700" fill="#FFFFFF">REST API</text><text x="1224" y="286" font-size="12" fill="#C9DEDF">One /v1 API for web and WhatsApp</text>
+<text x="1224" y="308" font-size="13.5" font-weight="700" fill="#FFFFFF">Cognito authentication</text><text x="1224" y="324" font-size="12" fill="#C9DEDF">JWT checked on every app request</text>
+<text x="1224" y="346" font-size="13.5" font-weight="700" fill="#FFFFFF">Multilingual</text><text x="1224" y="362" font-size="12" fill="#C9DEDF">Questions and answers in any language</text>
+<text x="1224" y="384" font-size="13.5" font-weight="700" fill="#FFFFFF">End-to-end encryption</text><text x="1224" y="400" font-size="12" fill="#C9DEDF">WhatsApp encrypts phone to Twilio</text>
+<line x1="260" y1="185" x2="330" y2="185" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)"/>
+<text x="295.0" y="168.0" font-size="11.5" font-weight="600" text-anchor="middle" fill="#0A3D42" stroke="#F7FAFA" stroke-width="4" paint-order="stroke">sign in</text>
+<line x1="540" y1="185" x2="610" y2="185" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)"/>
+<text x="575.0" y="168.0" font-size="11.5" font-weight="600" text-anchor="middle" fill="#0A3D42" stroke="#F7FAFA" stroke-width="4" paint-order="stroke">JWT</text>
+<line x1="260" y1="270" x2="610" y2="270" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)"/>
+<text x="435.0" y="253.0" font-size="11.5" font-weight="600" text-anchor="middle" fill="#0A3D42" stroke="#F7FAFA" stroke-width="4" paint-order="stroke">REST, HTTPS, JWT</text>
+<rect x="423.0" y="258.0" width="24" height="24" rx="12" fill="#F2B544" stroke="#0A3D42" stroke-width="1.4"/><text x="435.0" y="274.5" font-size="13" font-weight="700" text-anchor="middle" fill="#10282D">1</text>
+<line x1="260" y1="380" x2="610" y2="380" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)" marker-start="url(#ar)"/>
+<text x="435.0" y="363.0" font-size="11.5" font-weight="600" text-anchor="middle" fill="#0A3D42" stroke="#F7FAFA" stroke-width="4" paint-order="stroke">HTTPS webhook, signed</text>
+<rect x="423.0" y="368.0" width="24" height="24" rx="12" fill="#F2B544" stroke="#0A3D42" stroke-width="1.4"/><text x="435.0" y="384.5" font-size="13" font-weight="700" text-anchor="middle" fill="#10282D">1</text>
+<line x1="735.0" y1="440" x2="735.0" y2="480" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="723.0" y="448.0" width="24" height="24" rx="12" fill="#F2B544" stroke="#0A3D42" stroke-width="1.4"/><text x="735.0" y="464.5" font-size="13" font-weight="700" text-anchor="middle" fill="#10282D">2</text>
+<line x1="860" y1="520" x2="940" y2="520" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)" marker-start="url(#ar)"/>
+<rect x="888.0" y="508.0" width="24" height="24" rx="12" fill="#F2B544" stroke="#0A3D42" stroke-width="1.4"/><text x="900.0" y="524.5" font-size="13" font-weight="700" text-anchor="middle" fill="#10282D">4</text>
+<line x1="860" y1="625" x2="1210" y2="625" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)" marker-start="url(#ar)"/>
+<text x="1035.0" y="608.0" font-size="11.5" font-weight="600" text-anchor="middle" fill="#0A3D42" stroke="#F7FAFA" stroke-width="4" paint-order="stroke">context, vector search</text>
+<rect x="1023.0" y="613.0" width="24" height="24" rx="12" fill="#F2B544" stroke="#0A3D42" stroke-width="1.4"/><text x="1035.0" y="629.5" font-size="13" font-weight="700" text-anchor="middle" fill="#10282D">3</text>
+<line x1="735.0" y1="670" x2="735.0" y2="700" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)"/>
+<line x1="860" y1="740" x2="1210" y2="740" stroke="#0A3D42" stroke-width="2" marker-end="url(#ar)"/>
+<text x="1035.0" y="723.0" font-size="11.5" font-weight="600" text-anchor="middle" fill="#0A3D42" stroke="#F7FAFA" stroke-width="4" paint-order="stroke">reads plan rules</text>
+<rect x="30" y="823" width="26" height="16" rx="4" fill="#E3F1F2" stroke="#0A3D42" stroke-width="1.5"/><text x="64" y="836" font-size="12.5" fill="#4F6468">Channels</text>
+<rect x="220" y="823" width="26" height="16" rx="4" fill="#FFF1D6" stroke="#B7791F" stroke-width="1.5"/><text x="254" y="836" font-size="12.5" fill="#4F6468">Identity and security</text>
+<rect x="410" y="823" width="26" height="16" rx="4" fill="#FFFFFF" stroke="#0A3D42" stroke-width="1.5"/><text x="444" y="836" font-size="12.5" fill="#4F6468">Compute</text>
+<rect x="600" y="823" width="26" height="16" rx="4" fill="#E4F3EA" stroke="#1F7A4D" stroke-width="1.5"/><text x="634" y="836" font-size="12.5" fill="#4F6468">AI</text>
+<rect x="790" y="823" width="26" height="16" rx="4" fill="#E8EEF9" stroke="#3A5BA0" stroke-width="1.5"/><text x="824" y="836" font-size="12.5" fill="#4F6468">Data</text>
+</svg>

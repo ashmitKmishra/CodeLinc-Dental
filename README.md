@@ -1,83 +1,118 @@
-# CodeLinc-Dental (Floss)
+# Floss
 
-## Live site: https://d3unrkn8gkr6mk.cloudfront.net
+Floss answers an employee's dental benefits questions on WhatsApp and in a web app: what a procedure will cost, what the plan covers, and when to get care before the plan year resets. Built for codeLinc 11 (Lincoln Financial), Path 1.
 
-Floss answers a plan holder's dental cost questions from their own plan data, in the app and (later) over text and WhatsApp.
+**Live site: https://d3unrkn8gkr6mk.cloudfront.net**
 
-## How to get in
+![Floss landing page](docs/screenshots/hero.png)
 
-1. Open **https://d3unrkn8gkr6mk.cloudfront.net** and choose **Sign in** (or go straight to `/signin`).
-2. Enter the **mobile number on your plan**, with the country code, and your **password**.
-3. Open **Chat** and ask a question, for example *"How much are braces in network?"*
+<!-- Replace the placeholder PNGs in docs/screenshots (hero, chat, dashboard, mobile) with real captures. Keep the file names. -->
 
-Accounts are created by the team. There is no sign-up and no password reset on the page, and codes are not sent by text or email.
+Demo video: _link goes here_
 
-| Person | Mobile number to sign in with |
-|---|---|
-| Ashwani Mishra | `+17739986828` |
-| Ashmit Mishra | `+16623524167` |
-| Muhammad Ashar | `+16624978806` |
-| Ibrahim Jimmi | `+15714736207` |
+## The problem
 
-Passwords are not stored in this repo. Ask Ashwani for yours.
+A dental plan is written in insurance terms: deductible, coinsurance, annual maximum, network. Most people can't turn that into a dollar figure for a crown or braces, so they overpay, skip care, or lose their benefits when the plan year resets.
 
-**If the page has no password box**, your browser is showing an old copy. Hard refresh (Cmd+Shift+R on Mac, Ctrl+Shift+R on Windows) or open it in a private window.
+Floss answers the question people actually have, "what will this cost me, and when should I do it?", in the app they already use. Every chat is saved.
 
-**If you see "That number or password isn't right"**, check the number includes `+1` and the password is typed exactly (it is case sensitive). Five or so wrong tries in a row make Cognito slow you down for a few minutes.
+## On WhatsApp
 
-### Setting or changing a password (admin, needs the `workshop` AWS profile)
+Ask for a plan summary, or get a reminder before benefits reset.
 
-```bash
-aws cognito-idp admin-set-user-password --profile workshop --region us-west-2 \
-  --user-pool-id us-west-2_qZf7sqhYd --username +1XXXXXXXXXX --password 'NewPassword1' --permanent
-```
+<p>
+  <img src="docs/screenshots/whatsapp-summary.png" width="300" alt="Floss summarizing a Lincoln plan on WhatsApp">
+  &nbsp;
+  <img src="docs/screenshots/whatsapp-reminder.png" width="300" alt="Floss sending a reminder that the annual maximum resets on January 1">
+</p>
 
-A password needs 8 or more characters with an upper-case letter, a lower-case letter and a number. This minimum is low on purpose for the demo; raise `MinimumLength` in `backend/rag/template.yaml` before real use.
+## In the web app
 
-### Adding someone new
+![Chat](docs/screenshots/chat.png)
 
-1. Add their row to `db/04_users_chat.sql` (and their treatment rows via `scripts/build_patient_treatment_vectors.py`) and load it with `scripts/load_users_chat.py`.
-2. Add `{ "phone", "email" }` (plus an optional `"password"`) to `scripts/cognito_users.local.json`. The file is git-ignored because it holds contact details; the format is in `scripts/cognito_users.example.json`.
-3. Run `AWS_PROFILE=workshop uv run --with boto3 python scripts/create_cognito_users.py`.
+![Dashboard](docs/screenshots/dashboard.png)
 
-## What you can do on the site
+![Phone view](docs/screenshots/mobile.png)
 
-- **Chat**: a friendly advocate that speaks to you as the employee and about your spouse and children by name. One model call picks what you asked about, code looks up the stored estimates and does the arithmetic, and a second call writes the reply; every dollar figure and contact detail is checked against the stored data. It points you to the hospital to confirm anything it does not have and offers to draft the email. Use **History** to switch between app chats and WhatsApp Messenger, or start a **New chat**. Every message is saved.
-- **Overview**: your household and the Lincoln sample plan. Plan rules and usage are still sample data; the backend does not serve them yet.
-- Not available yet: linking a phone for texting, confirming actions, and emailing a transcript. WhatsApp history is empty because nothing sends WhatsApp messages yet.
+## Architecture
 
-## How it is deployed (AWS account 435157217462, us-west-2)
+![Floss architecture](docs/architecture/architecture.svg)
 
-```
-Browser ──HTTPS──> CloudFront ──> private S3 bucket          (stack codelinc-dental-web, infra/web.yaml)
-   │
-   ├──HTTPS──> Cognito user pool                              (phone + password, admin-create only)
-   └──HTTPS──> API Gateway (JWT authorizer) ──> Lambda ──> RDS Postgres (users, chat_messages, pgvector)
-                                                  └──────> Bedrock (Titan embeddings + Claude)
-                                                            (stack codelinc-dental-rag, backend/rag/template.yaml)
-```
+The editable source is [`architecture.drawio`](docs/architecture/architecture.drawio). Open it at [diagrams.net](https://app.diagrams.net), edit, and export as SVG over `architecture.svg`. Steps 1 to 4 are marked on the diagram.
 
-- Redeploy the website after a front-end change: `./scripts/deploy_web.sh` (needs Node and the `workshop` profile).
-- Redeploy the API after a Lambda or template change: `./backend/rag/deploy.sh` (needs the `workshop` profile). Offline tests: `python3 -m unittest backend/rag/test_advisor.py`.
-- Database changes need the admin login, which is only available through `asm-exec` (see the header of `scripts/load_users_chat.py`).
-- TLS: API Gateway, Cognito and the database connection require TLS 1.2 or newer. CloudFront's default address still accepts older versions; fixing that needs a custom domain.
+1. The person signs in with Amazon Cognito and asks in the web app. WhatsApp messages come in through a signed Twilio webhook on the same API.
+2. API Gateway checks the JWT (or Twilio's signature) and hands the request to the API Lambda.
+3. The Lambda takes the phone number from the verified token, never from the request. It replays the last 20 messages as context and searches pgvector for that person's rows.
+4. Bedrock does the language work. One Claude Haiku 4.5 call picks the person and treatment. Code then looks up the stored estimates and does the arithmetic. A second call writes the reply from those facts. Titan Text Embeddings v2 handles the search.
+5. Every dollar figure, email address, phone number and link in the reply must be one of the facts. If one isn't, the writer gets one retry, and after that code writes the reply. The Lambda saves both messages and returns the answer.
 
-The RDS instance and the workshop credentials are temporary. If the site stops working, the credentials have probably expired or the instance was stopped.
+The six ideas behind it:
 
-## Team workflow
-- `main` must always work. Never push directly to it.
-- Create a branch for each task: `git checkout -b feature/<short-name>`
-- Open a Pull Request into `main` and merge small changes often.
+- RAG: the model answers from rows retrieved for that person, and from facts code builds from them, not from memory.
+- Context: each turn replays the last 20 messages, so "and for my son?" makes sense.
+- REST API: one versioned `/v1` API on Amazon API Gateway serves the web app and WhatsApp. Its shapes are zod schemas in `packages/contracts`.
+- Cognito authentication: sign-in with a mobile number and password. API Gateway validates the token on every app route.
+- Multilingual: Claude and Titan both handle many languages. Titan is tuned for English, so the plan is to translate the question before searching.
+- WhatsApp encryption: WhatsApp encrypts messages end to end between the phone and the WhatsApp Business API that Twilio runs. From Twilio to our API they travel over HTTPS, and we check Twilio's signature on every call.
 
-## Run it locally
+## What works today
+
+Live on AWS:
+- The web app on CloudFront and S3, with sign-in, chat, chat history and family member cards
+- API Gateway and a Lambda behind it, with a Cognito authorizer
+- Chat answers from the picker and writer pipeline in `backend/rag`, tested offline with `python3 -m unittest backend/rag/test_advisor.py`
+- Postgres with pgvector: 20 treatment estimates (4 people, 5 conditions), 30 NC hospitals with contact details, 30 NC dental costs, users and chat history
+
+Built on the `whatsapp-chatbot` branch, not merged to `main` yet:
+- A signed Twilio webhook route (`POST /v1/twilio/sms`) in the API Lambda that answers WhatsApp and SMS from the same chat history
+- A separate Lambda in `backend/whatsapp-chatbot` that introduces Floss AI and calls the same RAG function
+
+Partly done:
+- Cost math. Code computes savings and the corrected braces totals for the five stored treatments. There is no general plan-rules engine yet.
+- Reminders. The dashboard shows when they go out, and the screenshot above shows one sent on WhatsApp. The code that schedules and sends them is not in the repo yet.
+
+Not built:
+- Language detection and translation
+- Reading carrier PDFs into plan rules. The Overview page shows the Lincoln sample plan, so its numbers are not the member's real usage.
+- Emailing the chat transcript
+
+The stored estimates use a simple allowed amount (80% of the cash price). The advisor corrects braces for the lifetime orthodontic limit and warns about the annual maximum, but only for those five treatments.
+
+## Try it
+
+On the live site, sign in with the mobile number on your plan and your password (ask Ashwani for one). Open **Chat** and ask `How much are braces in network?`, then `and for my son?`. For WhatsApp, message Floss from a registered phone (ask Ashar for the sandbox join code).
+
+To run it on your machine with sample data and no backend, you need Node 20.19 or newer:
 
 ```bash
 npm install
-npm run dev        # http://127.0.0.1:5173, built-in sample data (mock mode)
-npm run typecheck && npm test && npm run build
+npm run dev
 ```
 
-- `apps/web`: the React app. `packages/contracts`: the API contract (zod schemas), real plan fixtures from five carriers' PDFs, and JSON Schema for the backend (`npm run schema`).
-- **Mock vs live:** `VITE_DATA_MODE=mock` (default) uses built-in sample data and accepts any email and password. For the live backend, copy `apps/web/.env.example` to `apps/web/.env.local` and set `VITE_DATA_MODE=live`; sign-in then uses the real accounts above.
-- In mock mode, the floating **Demo** button (bottom right) switches between six real plans and between a family and one person (Lincoln, Delta Dental, Aetna, MetLife Standard and High, Cigna).
-- Specs: `md-files/BUILD-BRIEF.md`, `CONTEXT.md`, `FRONTEND.md`, `BACKEND.md`. What has been built on AWS and why: `md-files/backend-record.md`.
+Open http://127.0.0.1:5173, choose **Get started**, and sign up with any email and a password of 12 or more characters. The **Demo** button at the bottom right switches between six real plans (Lincoln, Delta Dental, Aetna, MetLife Standard and High, Cigna) and between a family and one person.
+
+Before a commit, run `npm run typecheck && npm test && npm run build`. To point the app at the live backend instead, copy `apps/web/.env.example` to `apps/web/.env.local` and set `VITE_DATA_MODE=live`.
+
+## Repository
+
+| Path | What is in it |
+| --- | --- |
+| `apps/web` | The React app: React 19, Vite, TypeScript, Tailwind v4, Motion, TanStack Query |
+| `packages/contracts` | The API contract (zod), plan fixtures from five carriers' PDFs, JSON Schema |
+| `backend/rag` | The API Lambda, the picker and writer pipeline, tests, deploy script, CloudFormation |
+| `backend/whatsapp-chatbot` | The WhatsApp bot (on its branch) |
+| `infra` | CloudFormation for the website |
+| `db`, `scripts` | SQL tables, loaders, Cognito user and deploy scripts |
+| `docs` | Architecture diagram and screenshots |
+| `md-files` | Specs, build brief, backend record and operations notes |
+
+## Team
+
+| Name | Built |
+| --- | --- |
+| Ashmit Mishra | Web app, design, API contract |
+| Ashwani Mishra | AWS backend: database, RAG, API, sign-in, hosting |
+| Muhammad Ashar Mian | WhatsApp implementation |
+| Ibrahim Jimi | System design |
+
+`main` must always work, so changes go through pull requests. Specs live in [`md-files`](md-files): start with `BUILD-BRIEF.md`.
