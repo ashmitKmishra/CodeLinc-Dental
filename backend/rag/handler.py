@@ -59,6 +59,12 @@ SSL.minimum_version = ssl.TLSVersion.TLSv1_2  # never fall back below TLS 1.2 to
 PHONE_RE = re.compile(r"^\+[1-9]\d{9,14}$")
 TWILIO_KEYWORDS = {"STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "START", "UNSTOP", "YES", "HELP", "INFO"}
 
+class ApiErr(Exception):
+    def __init__(self, status, code, message, retryable=False):
+        super().__init__(message)
+        self.status, self.code, self.message, self.retryable = status, code, message, retryable
+
+
 def _connect():
     token = rds.generate_db_auth_token(DBHostname=DB_HOST, Port=DB_PORT, DBUsername=DB_USER, Region=REGION)
     return pg8000.native.Connection(user=DB_USER, password=token, host=DB_HOST, port=DB_PORT,
