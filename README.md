@@ -8,7 +8,6 @@ Floss answers an employee's dental benefits questions on WhatsApp and in a web a
 
 <!-- Replace the placeholder PNGs in docs/screenshots (hero, chat, dashboard, mobile) with real captures. Keep the file names. -->
 
-Demo video: _link goes here_
 
 ## The problem
 
@@ -32,7 +31,6 @@ Ask for a plan summary, or get a reminder before benefits reset.
 
 ![Dashboard](docs/screenshots/dashboard.png)
 
-![Phone view](docs/screenshots/mobile.png)
 
 ## Architecture
 
@@ -43,7 +41,7 @@ The editable source is [`architecture.drawio`](docs/architecture/architecture.dr
 1. The person signs in with Amazon Cognito and asks in the web app. WhatsApp messages come in through a signed Twilio webhook on the same API.
 2. API Gateway checks the JWT (or Twilio's signature) and hands the request to the API Lambda.
 3. The Lambda takes the phone number from the verified token, never from the request. It replays the last 20 messages as context and searches pgvector for that person's rows.
-4. Bedrock does the language work. One Claude Haiku 4.5 call picks the person and treatment. Code then looks up the stored estimates and does the arithmetic. A second call writes the reply from those facts. Titan Text Embeddings v2 handles the search.
+4. Bedrock does the language work. Code then looks up the stored estimates and does the arithmetic. A second call writes the reply from those facts. Titan Text Embeddings v2 handles the search.
 5. Every dollar figure, email address, phone number and link in the reply must be one of the facts. If one isn't, the writer gets one retry, and after that code writes the reply. The Lambda saves both messages and returns the answer.
 
 The six ideas behind it:
@@ -63,13 +61,10 @@ Live on AWS:
 - Chat answers from the picker and writer pipeline in `backend/rag`, tested offline with `python3 -m unittest backend/rag/test_advisor.py`
 - Postgres with pgvector: 20 treatment estimates (4 people, 5 conditions), 30 NC hospitals with contact details, 30 NC dental costs, users and chat history
 
-Built on the `whatsapp-chatbot` branch, not merged to `main` yet:
+Built on the `whatsapp-chatbot`
 - A signed Twilio webhook route (`POST /v1/twilio/sms`) in the API Lambda that answers WhatsApp and SMS from the same chat history
 - A separate Lambda in `backend/whatsapp-chatbot` that introduces Floss AI and calls the same RAG function
 
-Partly done:
-- Cost math. Code computes savings and the corrected braces totals for the five stored treatments. There is no general plan-rules engine yet.
-- Reminders. The dashboard shows when they go out, and the screenshot above shows one sent on WhatsApp. The code that schedules and sends them is not in the repo yet.
 
 Not built:
 - Language detection and translation
