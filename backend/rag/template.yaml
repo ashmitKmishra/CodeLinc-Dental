@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CodeLinc dental RAG Lambda in the RDS VPC, reaching Bedrock through a VPC endpoint
+
+Parameters:
+  VpcId: {Type: AWS::EC2::VPC::Id}
+  SubnetIds: {Type: 'List<AWS::EC2::Subnet::Id>'}
+  RdsSecurityGroupId: {Type: AWS::EC2::SecurityGroup::Id}
+  DbHost: {Type: String}
+  DbPort: {Type: String, Default: '8443'}
+  DbiResourceId: {Type: String, Description: 'RDS DbiResourceId (db-XXXX), used in the rds-db:connect ARN'}
+  CodeBucket: {Type: String}
+  CodeKey: {Type: String}
+  ModelId: {Type: String, Default: 'us.anthropic.claude-haiku-4-5-20251001-v1:0'}
+
+Resources:
+  LambdaSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties: {GroupDescription: dental RAG lambda, VpcId: !Ref VpcId}
+
+  EndpointSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: bedrock-runtime VPC endpoint, HTTPS from the lambda only
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, SourceSecurityGroupId: !Ref LambdaSg}
+
+  RdsFromLambda:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RdsSecurityGroupId
+      IpProtocol: tcp
+      FromPort: !Ref DbPort
+      ToPort: !Ref DbPort
+      SourceSecurityGroupId: !Ref LambdaSg
+
+  BedrockEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VpcId
+      VpcEndpointType: Interface
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.bedrock-runtime
+      SubnetIds: !Ref SubnetIds
+      SecurityGroupIds: [!Ref EndpointSg]
+      PrivateDnsEnabled: true
+
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: lambda.amazonaws.com}, Action: 'sts:AssumeRole'}]
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: rag
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [bedrock:InvokeModel]
+                Resource:
+                  - !Sub arn:aws:bedrock:*::foundation-model/*
+                  - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*
+              - Effect: Allow
+                Action: [rds-db:connect]
+                Resource: !Sub arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${DbiResourceId}/api_reader
+
+  Function:
+    Type: AWS::Lambda::Function
+    DependsOn: [BedrockEndpoint, RdsFromLambda]
+    Properties:
+      FunctionName: codelinc-dental-rag
+      Runtime: python3.12
+      Architectures: [arm64]
+      Handler: handler.lambda_handler
+      Role: !GetAtt Role.Arn
+      Timeout: 30
+      MemorySize: 512
+      Code: {S3Bucket: !Ref CodeBucket, S3Key: !Ref CodeKey}
+      VpcConfig:
+        SubnetIds: !Ref SubnetIds
+        SecurityGroupIds: [!Ref LambdaSg]
+      Environment:
+        Variables: {DB_HOST: !Ref DbHost, DB_PORT: !Ref DbPort, DB_USER: api_reader, MODEL_ID: !Ref ModelId}
+
+Outputs:
+  FunctionName: {Value: !Ref Function}
