@@ -12,18 +12,28 @@ Branch: `ashwani/tale-of-threeDatasets`. Goal of this slice: three dental datase
 
 Each file drops and rebuilds its table, so it is safe to re-run.
 
-## AWS setup
+## AWS setup (workshop account 435157217462, us-west-2)
 
-- Tooling: AWS CLI v2, `uv`, Agent Toolkit (skills and AWS MCP server config written for Claude Code, Cursor and Kiro). Profile `default`, region `us-east-2`, logged in with `aws login`.
-- RDS instance `codelinc-dental`: Postgres 18.3, `db.t4g.micro`, 20 GB gp3, encrypted, IAM auth on, publicly accessible, 1-day backups, single AZ.
-- Endpoint: `codelinc-dental.c9agi4wgwbjk.us-east-2.rds.amazonaws.com`. Database `postgres`, schema `public` (kept to match the grants in `03_nc_dental_costs.sql`).
-- Admin user `dbadmin`. Password is managed by AWS Secrets Manager (`rds!db-bdf3159a-...`). Never commit it.
-- Security group `codelinc-dental-rds` (`sg-062f9172a418b2ea1`): inbound Postgres only from the developer's IP /32.
-- `api_reader`: IAM-auth, read-only on all three tables. Tested with an IAM token: reads returned 10 / 30 / 30 rows.
+The first account (010319218313, us-east-2) was abandoned: Bedrock was blocked pending account verification. Everything was rebuilt in the workshop account. The workshop role is limited, for example `s3vectors:*` is denied.
+
+- Tooling: AWS CLI v2, `uv`, Agent Toolkit. Credentials are temporary workshop keys in profile `workshop` in `~/.aws/credentials`, region `us-west-2`. They expire after a few hours, so re-copy them from "Get AWS CLI credentials".
+- RDS instance `codelinc-dental`: Postgres, `db.t4g.micro`, 20 GB, encrypted, IAM auth on, public, **port 8443**. Database `postgres`, schema `public`. Admin `dbadmin`, password in Secrets Manager (managed). Fetch it only through `asm-exec` references. Never call `get-secret-value`.
+- Security group `codelinc-dental-rds`: inbound 8443 from the developer IP /32 only.
+- Tables loaded by `scripts/load_tables.py`: 10 / 30 / 30 rows. `api_reader` (IAM auth, read-only) is created by `03_nc_dental_costs.sql`; it has **not** been granted `patients` or `nc_hospitals` in this account yet.
+- Bedrock: Titan Text Embeddings v2 (`amazon.titan-embed-text-v2:0`) works. Gemini is not in Bedrock; Gemma models cannot embed.
+
+## Patient treatment table and vectors
+
+- S3 bucket `codelinc-dental-data-435157217462-us-west-2`, key `tables/patient_treatment_costs.csv`: 20 rows (4 people x 5 conditions), 8 columns: phone, name, disease, in-network cost, in-network hospital, out-of-network cost, out-of-network hospital, cash cost. Phone alone cannot be a primary key (5 rows per phone), so the key is (phone, disease).
+- Ashwani Mishra / cavity-dental filling: cash cost is "Needs manual verification" (no generated number).
+- Vectors: pgvector table `patient_treatment_embeddings` on the RDS instance (1024-dim, cosine HNSW index, PK phone+disease). S3 Vectors was denied for the workshop role.
+- Assumptions: all four people are on Lincoln Financial. Hospitals come from Lincoln's in-network and out-of-network lists in `nc_hospitals`. Cash cost is the average from `nc_dental_costs` (braces D8090, cleaning D1110, filling D2391, gum D4346, wisdom teeth D7240). Insurance math: allowed amount = 80% of cash; plan pays preventive 100%, basic 80%, major and ortho 50%. In-network patient pays allowed minus plan share. Out-of-network patient pays cash minus plan share. Orthodontic lifetime maximums are ignored.
+- Rebuild: `scripts/build_patient_treatment_vectors.py` (safe to rerun).
 
 ## Gotchas
 
 - The hackathon Wi-Fi blocks outbound port 5432. Ports 443, 8080, 8443 and 2222 get through. To work around it the instance port was moved to **8443**, with an extra 8443 inbound rule for the dev IP. **Decision: it stays on 8443.** Use 8443 everywhere.
+- Old account 010319218313 may still hold an RDS instance, two S3 buckets and a security group (billing). Delete them if no longer needed.
 - The allowed IP is a single address. If your IP changes, update the security group.
 - The instance is billed while it runs. Stop or delete it after the hackathon.
 

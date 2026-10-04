@@ -8,7 +8,7 @@ Final goal: full-stack deployment on AWS. **Order: RAG on Bedrock first, then th
 - [ ] Replace the random network flags in `nc_hospitals` with real payer directory data if accuracy starts to matter.
 
 ## 1. RAG in Amazon Bedrock (next)
-- [ ] Choose the vector store. Bedrock Knowledge Bases support Aurora PostgreSQL (pgvector), OpenSearch Serverless and S3 Vectors. A standard RDS Postgres instance is not on that list (verify in the docs). Likely pick: S3 Vectors or Aurora Serverless v2.
+- [ ] Choose the vector store. Today the 20-row embeddings live in pgvector on RDS. Bedrock Knowledge Bases support Aurora PostgreSQL (pgvector), OpenSearch Serverless and S3 Vectors. A standard RDS Postgres instance is not on that list (verify in the docs). The workshop role denies S3 Vectors. Options: the existing pgvector table (used directly by our own retrieval code), or a Knowledge Base on OpenSearch Serverless or Aurora if the role allows it.
 - [ ] Turn the three tables into documents. One doc per (service, insurer) with the in-network vs out-of-network cost summary, plus per-insurer hospital network lists. Cost math must come from SQL or the engine, not the model.
 - [ ] Upload docs to S3, create the Knowledge Base (Titan Text Embeddings v2), and sync.
 - [ ] Add a generation model via Converse (`RetrieveAndGenerate`, or `Retrieve` plus our own prompt) and Bedrock Guardrails: block diagnosis and financial advice, block SSN and card numbers.
