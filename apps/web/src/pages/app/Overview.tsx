@@ -1,11 +1,11 @@
 import { LogOut, MessageSquare } from 'lucide-react';
 import { MemberUsageCard } from '@/components/floss/MemberUsageCard';
-import { PlanOnFilePanel, RemindersPanel, TranscriptPanel } from '@/components/floss/OverviewPanels';
+import { PlanOnFilePanel, RemindersPanel } from '@/components/floss/OverviewPanels';
 import { useOpenTexting } from '@/components/floss/TextingContext';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { signOut, useAuthUser } from '@/lib/authStore';
-import { cn } from '@/lib/cn';
 import { dayAfter, formatDate, plural } from '@/lib/format';
 import { useLoaded } from '@/lib/hooks';
 
@@ -42,22 +42,21 @@ export default function Overview() {
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <section aria-label={solo ? 'Your annual maximum' : 'Annual maximum by person'} className="flex min-w-0 flex-col gap-3">
           <h2 className="t-h2">{solo ? 'Your annual maximum' : 'Annual maximum, by person'}</h2>
-          <div className={cn('grid gap-4', !solo && '2xl:grid-cols-2')}>
-            {cards.map(({ m, i, u }, n) => (
-              <div key={m.id} className={cn(!solo && cards.length % 2 === 1 && n === cards.length - 1 && '2xl:col-span-2')}>
-                <MemberUsageCard member={m} index={i} usage={u} wide={solo || (cards.length % 2 === 1 && n === cards.length - 1)} />
-              </div>
-            ))}
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr))]">
+            {cards.map(({ m, i, u }) => <MemberUsageCard key={m.id} member={m} index={i} usage={u} />)}
           </div>
         </section>
 
         <aside aria-label="Account" className="flex min-w-0 flex-col gap-6">
           <RemindersPanel snapshot={s} />
           <PlanOnFilePanel plan={plan} />
-          <TranscriptPanel email={user?.email ?? ''} hasMessages={s.messages.length > 0} />
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-bad/25 bg-bad-soft p-4">
-            <p className="min-w-0 truncate t-small text-bad">Signed in as {user?.email}</p>
-            <Button variant="danger" onClick={() => signOut()}><LogOut aria-hidden className="size-4" />Sign out</Button>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-3 rounded-lg border border-line bg-surface p-4">
+            {user && <Avatar name={user.name} index={0} size={40} />}
+            <div className="min-w-0 flex-1 basis-40">
+              <p className="t-body-strong truncate">{user?.name}</p>
+              {user?.email && <p className="t-small truncate text-ink-muted">{user.email}</p>}
+            </div>
+            <Button variant="dangerOutline" onClick={() => signOut()}><LogOut aria-hidden className="size-4" />Sign out</Button>
           </div>
         </aside>
       </div>
