@@ -6,7 +6,6 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { signOut, useAuthUser } from '@/lib/authStore';
-import { cn } from '@/lib/cn';
 import { dayAfter, formatDate, plural } from '@/lib/format';
 import { useLoaded } from '@/lib/hooks';
 
@@ -43,12 +42,8 @@ export default function Overview() {
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <section aria-label={solo ? 'Your annual maximum' : 'Annual maximum by person'} className="flex min-w-0 flex-col gap-3">
           <h2 className="t-h2">{solo ? 'Your annual maximum' : 'Annual maximum, by person'}</h2>
-          <div className={cn('grid gap-4', !solo && '2xl:grid-cols-2')}>
-            {cards.map(({ m, i, u }, n) => (
-              <div key={m.id} className={cn(!solo && cards.length % 2 === 1 && n === cards.length - 1 && '2xl:col-span-2')}>
-                <MemberUsageCard member={m} index={i} usage={u} wide={solo || (cards.length % 2 === 1 && n === cards.length - 1)} />
-              </div>
-            ))}
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr))]">
+            {cards.map(({ m, i, u }) => <MemberUsageCard key={m.id} member={m} index={i} usage={u} />)}
           </div>
         </section>
 
