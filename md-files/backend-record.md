@@ -52,4 +52,4 @@ There is no dashboard yet. What exists in the console:
 - RDS instance and metrics: https://us-west-2.console.aws.amazon.com/rds/home?region=us-west-2#database:id=codelinc-dental;is-cluster=false (Monitoring tab shows CPU, connections, storage).
 - Secrets Manager (admin password): search "rds!db-" in us-west-2.
 - Table contents: the RDS console has no query editor for a standard RDS Postgres instance. Use a SQL client (DBeaver, pgAdmin, psql) with host above, port 8443 (or 5432 after revert), user `dbadmin`, SSL required.
-- A CloudWatch dashboard for RDS metrics can be added (see `next.md`).
+- A CloudWatch dashboard for RDS metrics can be added (see `md-files/backend-next.md`).
