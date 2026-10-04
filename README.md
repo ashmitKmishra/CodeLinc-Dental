@@ -1,8 +1,8 @@
 # Floss
 
-Floss answers an employee's dental benefits questions on WhatsApp and in a web app: what a procedure will cost, what the plan covers, and when to get care before the plan year resets. Built for codeLinc 11 (Lincoln Financial), Path 1.
+**To run the project:** open https://d3unrkn8gkr6mk.cloudfront.net and sign in with the mobile number `+17739986828` and the password `Ashwani123`.
 
-**Live site: https://d3unrkn8gkr6mk.cloudfront.net**
+Floss answers an employee's dental benefits questions on WhatsApp and in a web app: what a procedure will cost, what the plan covers, and when to get care before the plan year resets. Built for codeLinc 11 (Lincoln Financial), Path 1.
 
 ![Floss landing page](docs/screenshots/hero.png)
 
@@ -71,7 +71,7 @@ The stored estimates use a simple allowed amount (80% of the cash price). The ad
 
 ## Try it
 
-On the live site, sign in with the mobile number on your plan and your password (ask Ashwani for one). Open **Chat** and ask `How much are braces in network?`, then `and for my son?`. For WhatsApp, message Floss from a registered phone (ask Ashar for the sandbox join code).
+On the live site, sign in with the account at the top of this page. Open **Chat** and ask `How much are braces in network?`, then `and for my son?`. For WhatsApp, message Floss from a registered phone (ask Ashar for the sandbox join code).
 
 To run it on your machine with sample data and no backend, you need Node 20.19 or newer:
 
