@@ -64,13 +64,8 @@ Live on AWS:
 - Postgres with pgvector: 20 treatment estimates (4 people, 5 conditions), 30 NC hospitals with contact details, 30 NC dental costs, users and chat history
 - The Floss AI WhatsApp bot in `backend/whatsapp-chatbot`: Twilio calls a Lambda that introduces Floss AI and sends questions from registered numbers to the same RAG function, so each answer comes from that member's own rows
 
-On a branch, not merged yet:
 - A signed Twilio webhook route (`POST /v1/twilio/sms`) inside the API Lambda, so WhatsApp and SMS can use the same API as the web app. Today the bot calls the RAG function directly.
 
-Not built:
-- Language detection and translation
-- Reading carrier PDFs into plan rules. The Overview page shows the Lincoln sample plan, so its numbers are not the member's real usage.
-- Emailing the chat transcript
 
 The stored estimates use a simple allowed amount (80% of the cash price). The advisor corrects braces for the lifetime orthodontic limit and warns about the annual maximum, but only for those five treatments.
 
@@ -87,7 +82,7 @@ npm run dev
 
 Open http://127.0.0.1:5173, choose **Get started**, and sign up with any email and a password of 12 or more characters. The **Demo** button at the bottom right switches between six real plans (Lincoln, Delta Dental, Aetna, MetLife Standard and High, Cigna) and between a family and one person.
 
-Before a commit, run `npm run typecheck && npm test && npm run build`. To point the app at the live backend instead, copy `apps/web/.env.example` to `apps/web/.env.local` and set `VITE_DATA_MODE=live`.
+
 
 ## Repository
 
