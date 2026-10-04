@@ -120,6 +120,8 @@ export const Member = z.object({
   firstName: z.string(),
   relationship: z.enum(['self', 'spouse', 'child', 'other']),
   birthDate: IsoDate,
+  /** Insurer member ID, when the backend has one. */
+  memberNumber: z.string().nullish(),
 });
 export type Member = z.infer<typeof Member>;
 

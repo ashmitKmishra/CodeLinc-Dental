@@ -1,6 +1,6 @@
 """Floss API Lambda behind API Gateway (HTTP API): chat history and Bedrock RAG over the caller's own rows.
 
-Sign-in is Amazon Cognito (one-time code by SMS or email, no passwords). API Gateway's JWT authorizer validates the Cognito ID
+Sign-in is Amazon Cognito (phone number + password). API Gateway's JWT authorizer validates the Cognito ID
 token before this code runs; the verified `phone_number` claim is the caller's identity.
 
 Routes (all JSON, all need "Authorization: Bearer <Cognito ID token>"):
@@ -12,9 +12,9 @@ Routes (all JSON, all need "Authorization: Bearer <Cognito ID token>"):
   GET  /v1/turns/{id}                      -> {"id","status":"completed","reply": Message}
 The phone always comes from the verified token, never the request, so one patient can never read another's rows.
 
-RAG flow: embed question (Titan v2) -> pgvector search filtered to that phone -> Bedrock Converse explains the rows ->
-every $ figure in the reply must appear in the retrieved rows, otherwise return a safe fallback.
-The model explains; it never computes or invents prices (md-files/BACKEND.md section 1).
+Answer flow (backend/rag/advisor.py): a first model call only picks the person and treatments; code looks up the stored estimates and does all
+the arithmetic; a second call writes the reply in the voice of the family's advocate from those facts; any figure, email, phone number or
+link that is not in the facts is rejected (one retry, then a code-written reply).
 """
 import base64
 import json
@@ -23,10 +23,12 @@ import re
 import ssl
 import traceback
 import uuid
-from datetime import timezone
+from datetime import date, timezone
 
 import boto3
 import pg8000.native
+
+import advisor
 
 REGION = os.environ.get("AWS_REGION", "us-west-2")
 DB_HOST = os.environ["DB_HOST"]
@@ -35,37 +37,14 @@ DB_USER = os.environ.get("DB_USER", "api_app")
 MODEL_ID = os.environ.get("MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
 EMBED_MODEL = "amazon.titan-embed-text-v2:0"
 TOP_K = 5
-HISTORY_TURNS = 6
+HISTORY_TURNS = 20  # messages (10 exchanges) of this chat replayed to the model
 
+_CTX = None  # Lambda context of the current invocation, for the remaining-time check
 rds = boto3.client("rds", region_name=REGION)
 bedrock = boto3.client("bedrock-runtime", region_name=REGION)
 SSL = ssl.create_default_context(cafile=os.path.join(os.path.dirname(__file__), "rds-global-bundle.pem"))
 SSL.minimum_version = ssl.TLSVersion.TLSv1_2  # never fall back below TLS 1.2 to the database
 PHONE_RE = re.compile(r"^\+[1-9]\d{9,14}$")
-MONEY_RE = re.compile(r"\$\s?(\d[\d,]*(?:\.\d+)?)")
-
-SYSTEM = """You are Floss, a warm, upbeat dental-benefits assistant for one plan holder. Be cheerful and proactive: greet the question with
-a friendly line, volunteer the single most useful next fact from the rows (for example the cheaper of in-network and out-of-network),
-and use at most one emoji.
-Answer ONLY from the TREATMENT ROWS provided. Rules:
-- Quote dollar amounts exactly as written in the rows. Never calculate, round, add, or estimate any amount.
-- Put every retrieved figure and hospital name in markdown bold, like **$2686.40** and **Duke University Hospital**. Use no other markdown.
-- If a row says the cash price is not available or needs manual verification, say a manual check is needed. Never guess a price.
-- Say clearly which option is in-network, out-of-network, or cash, and name the recommended hospital for each.
-- The phone number in the rows is the patient's own number. Never tell the patient to call it or suggest a phone number.
-- Do not diagnose, and do not give medical, legal or financial advice. Costs are estimates, not quotes.
-- If the rows do not answer the question, say you do not have that information.
-- Earlier messages are only for context on what the patient means; take every number from the TREATMENT ROWS.
-- ALWAYS end with exactly one closing question, worded "Would you also be interested in something similar to be checked, such as <one check>?",
-  where <one check> comes from the OTHER CHECKS list (prefer one not already discussed). Put no dollar amounts in it.
-Keep it short."""
-
-
-class ApiErr(Exception):
-    def __init__(self, status, code, message, retryable=False):
-        super().__init__(message)
-        self.status, self.code, self.message, self.retryable = status, code, message, retryable
-
 
 def _connect():
     token = rds.generate_db_auth_token(DBHostname=DB_HOST, Port=DB_PORT, DBUsername=DB_USER, Region=REGION)
@@ -82,13 +61,9 @@ def _embed(text):
     return json.loads(bedrock.invoke_model(modelId=EMBED_MODEL, body=body)["body"].read())["embedding"]
 
 
-def _amounts(text):
-    return {round(float(m.replace(",", "")), 2) for m in MONEY_RE.findall(text)}
-
-
 def _user_json(row):
-    phone, name, birth_date, employer, insurance, family = row
-    return {"phone": phone, "name": name, "birthDate": birth_date.isoformat(), "employer": employer, "insurance": insurance,
+    phone, name, birth_date, member_number, employer, insurance, family = row
+    return {"phone": phone, "name": name, "birthDate": birth_date.isoformat(), "memberNumber": member_number, "employer": employer, "insurance": insurance,
             "family": json.loads(family) if isinstance(family, str) else family}
 
 
@@ -112,41 +87,49 @@ def _token_phone(conn, event):
 
 # ---------------------------------------------------------------- chat
 
-def _retrieve(conn, phone, question):
-    vec = "[" + ",".join(f"{x:.7f}" for x in _embed(question)) + "]"
+def _retrieve(conn, phone, query):
+    """The patient's own treatment rows, best match first (a patient has five, so all of them come back)."""
+    vec = "[" + ",".join(f"{x:.7f}" for x in _embed(query)) + "]"
     rows = conn.run(
-        "SELECT disease, doc, embedding <=> CAST(:v AS vector) AS dist FROM patient_treatment_embeddings "
-        "WHERE phone = :p ORDER BY dist LIMIT :k", v=vec, p=phone, k=TOP_K)
-    return [{"disease": r[0], "doc": r[1], "distance": float(r[2])} for r in rows]
+        "SELECT disease, in_network_cost, in_network_hospital, out_of_network_cost, out_of_network_hospital, cash_cost, "
+        "embedding <=> CAST(:v AS vector) AS dist FROM patient_treatment_embeddings WHERE phone = :p ORDER BY dist LIMIT :k",
+        v=vec, p=phone, k=TOP_K)
+    out = []
+    for d, ic, ih, oc, oh, cash, dist in rows:
+        try:
+            cash_value = float(cash)
+        except (TypeError, ValueError):
+            cash_value = None  # "Needs manual verification"
+        out.append({"disease": d, "in_cost": float(ic), "in_hospital": ih, "out_cost": float(oc), "out_hospital": oh,
+                    "cash_value": cash_value, "distance": float(dist)})
+    return out
 
 
 def _answer(conn, phone, conversation_id, question):
-    rows = _retrieve(conn, phone, question)
+    # Replies the guardrail had replaced are left out, so the model never copies their style.
+    history = conn.run("SELECT role, text FROM chat_messages WHERE phone = :p AND conversation_id = CAST(:c AS uuid) "
+                       "AND role IN ('user','assistant') AND NOT guardrail_replaced ORDER BY created_at DESC LIMIT :n",
+                       p=phone, c=conversation_id, n=HISTORY_TURNS)[::-1]
+    # The newest history row is the question just stored. Short follow-ups only make sense with the earlier questions,
+    # so the search uses the last two of those as well.
+    earlier_questions = [t for r, t in history if r == "user"][:-1]
+    rows = _retrieve(conn, phone, " ".join(earlier_questions[-2:] + [question]))
     if not rows:
         return "I don't have treatment estimates on file for you yet.", [], False
-    history = conn.run("SELECT role, text FROM chat_messages WHERE phone = :p AND conversation_id = CAST(:c AS uuid) "
-                       "AND role IN ('user','assistant') ORDER BY created_at DESC LIMIT :n",
-                       p=phone, c=conversation_id, n=HISTORY_TURNS)[::-1]
-    messages = []
-    for role, text in history:  # Converse needs alternating roles starting with user
-        if messages and messages[-1]["role"] == role:
-            messages[-1]["content"][0]["text"] += "\n" + text
-        elif messages or role == "user":
-            messages.append({"role": role, "content": [{"text": text}]})
-    if messages and messages[-1]["role"] == "user":
-        messages.pop()
-    context_text = "\n".join(f"- {r['doc']}" for r in rows)
-    others = ", ".join(r["disease"] for r in rows[1:]) or "none"
-    messages.append({"role": "user", "content": [{"text": f"TREATMENT ROWS:\n{context_text}\n\nOTHER CHECKS you can offer: {others}\n\nQUESTION: {question}"}]})
-    resp = bedrock.converse(modelId=MODEL_ID, system=[{"text": SYSTEM}], messages=messages,
-                            inferenceConfig={"maxTokens": 400, "temperature": 0.2})
-    answer = resp["output"]["message"]["content"][0]["text"].strip()
-    bad = _amounts(answer) - _amounts(context_text)
-    if bad:  # numbers must come from the rows, never from the model
-        answer = ("I couldn't safely phrase that answer, so here are the matching estimates exactly as recorded: "
-                  + " ".join(r["doc"] for r in rows[:2])
-                  + " Would you also be interested in something similar to be checked?")
-    return answer, [{"disease": r["disease"], "distance": round(r["distance"], 3)} for r in rows], bool(bad)
+    who = conn.run("SELECT full_name, insurance, family, member_number, birth_date FROM users WHERE phone = :p", p=phone)[0]
+    user = {"first": who[0].split()[0], "full": who[0], "insurance": who[1], "member": who[3], "birth": who[4].isoformat(),
+            "family": who[2] if isinstance(who[2], list) else json.loads(who[2])}
+
+    def lookup_contacts(names):
+        names = list(dict.fromkeys(names))
+        found = {n: (e, ph, u) for n, e, ph, u in conn.run(
+            "SELECT name, email, phone, info_url FROM hospital_contacts WHERE name = ANY(CAST(:n AS text[]))", n=names)}
+        return [{"name": n, "email": found[n][0], "phone": found[n][1], "url": found[n][2]} for n in names if n in found]
+
+    ctx = _CTX
+    time_left = (lambda: ctx.get_remaining_time_in_millis()) if ctx else (lambda: 30000)
+    answer, sel, replaced = advisor.respond(bedrock, MODEL_ID, history, question, rows, user, lookup_contacts, date.today(), time_left)
+    return answer, [{"disease": d} for d in sel["treatments"]], replaced
 
 
 def _post_turn(conn, phone, body):
@@ -211,7 +194,7 @@ def _list_conversations(conn, phone):
 
 
 def _me(conn, phone):
-    rows = conn.run("SELECT phone, full_name, birth_date, employer, insurance, family FROM users WHERE phone = :p", p=phone)
+    rows = conn.run("SELECT phone, full_name, birth_date, member_number, employer, insurance, family FROM users WHERE phone = :p", p=phone)
     return 200, {"user": _user_json(rows[0])}
 
 
@@ -237,6 +220,8 @@ def _route(conn, event, method, path, query, body):
 
 
 def lambda_handler(event, context):
+    global _CTX
+    _CTX = context
     rid = getattr(context, "aws_request_id", None)
     http = event.get("requestContext", {}).get("http", {})
     method, path = http.get("method", "POST"), event.get("rawPath", "")

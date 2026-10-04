@@ -29,7 +29,7 @@ There is **no upload step**. The employee's plan is already on file, so the sign
 - Also in Floss: the three bonuses from the slide: track annual maximum, in-network vs out-of-network, reminders before unused benefits expire.
 
 **App.** Only what the challenge asks for.
-- **Overview:** reminders, the plan on file (name, carrier, plan year, source document), annual maximum used and remaining per person (one person or a family), chat transcript email, sign out. Texting is a popup.
+- **Overview:** reminders, the plan on file (name, carrier, plan year, source document), annual maximum used and remaining per person (one person or a family), sign out. Texting is a popup.
 - **Chat:** the AI buddy, with the same history as texts, and **Email transcript**.
 - **Estimates, in/out-of-network and best order** are answered in chat (cards in the thread). There is no Care or Settings page.
 

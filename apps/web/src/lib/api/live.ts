@@ -9,17 +9,18 @@ export const LiveUser = z.object({
   phone: z.string(),
   name: z.string(),
   birthDate: z.string(),
+  memberNumber: z.string().nullish(),
   employer: z.string(),
   insurance: z.string(),
-  family: z.array(z.object({ firstName: z.string(), lastName: z.string(), relationship: z.enum(['spouse', 'child', 'other']), birthDate: z.string() })),
+  family: z.array(z.object({ firstName: z.string(), lastName: z.string(), relationship: z.enum(['spouse', 'child', 'other']), birthDate: z.string(), memberNumber: z.string().nullish() })),
 });
 export type LiveUser = z.infer<typeof LiveUser>;
 
 export const toAuthUser = (u: LiveUser): AuthUser => ({ id: u.phone, name: u.name, email: '', phone: u.phone });
 
 const toMembers = (u: LiveUser): Member[] => [
-  { id: 'm-self', firstName: u.name.split(' ')[0]!, relationship: 'self', birthDate: u.birthDate },
-  ...u.family.map((f, i) => ({ id: `m-${f.relationship}-${i}`, firstName: f.firstName, relationship: f.relationship, birthDate: f.birthDate })),
+  { id: 'm-self', firstName: u.name.split(' ')[0]!, relationship: 'self', birthDate: u.birthDate, memberNumber: u.memberNumber },
+  ...u.family.map((f, i) => ({ id: `m-${f.relationship}-${i}`, firstName: f.firstName, relationship: f.relationship, birthDate: f.birthDate, memberNumber: f.memberNumber })),
 ];
 
 /**

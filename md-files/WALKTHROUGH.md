@@ -44,7 +44,7 @@ The app has **no PDF upload**: in the real product the backend reads each employ
 ## 4. What to try, in order
 
 ### Overview
-Top to bottom: texting banner, **Reminders**, **Your plan on file**, **Annual maximum, by person**, **Chat transcript**, **Sign out**.
+Top to bottom: texting banner, **Reminders**, **Your plan on file**, **Annual maximum, by person**, **Sign out**.
 - **Reminders:** switch on/off, tick 60 / 30 / 14 days; the list below follows.
 - **Your plan on file:** plan name, carrier · plan year, and the source PDF file name and page count.
 - **Annual maximum** (Lincoln): Jordan $244 used, $1,256 left. Sam $120. Maya $0. Leo $95. Pick **Just me** in Demo and the single card spans the full row.
@@ -54,7 +54,7 @@ Top to bottom: texting banner, **Reminders**, **Your plan on file**, **Annual ma
 1. Chat → click **What will a crown cost me?** Floss **asks for your dentist's quote** instead of guessing a price.
 2. Type `He quoted $1,200` → you get the breakdown (Jordan: plan pays $600, you pay $600).
 3. Type `Leo had a filling, the bill was $180` → a dashed **Needs your OK** card → **Confirm**. Go to Overview: Leo's meter moved.
-4. Overview → **Chat transcript** → **Email transcript** (email is simulated in the demo).
+4. Chat → **Email transcript** in the header (email is simulated in the demo).
 
 ### Other plans
 Demo → **Delta Dental** or **Cigna**, then ask in chat about a crown or braces. Cigna says orthodontics isn't covered.
