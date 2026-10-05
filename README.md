@@ -80,7 +80,7 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:5173, choose **Get started**, and sign up with any email and a password of 12 or more characters. The **Demo** button at the bottom right switches between six real plans (Lincoln, Delta Dental, Aetna, MetLife Standard and High, Cigna) and between a family and one person.
+Choose **Get started**, and sign up with any email and a password of 12 or more characters. The **Demo** button at the bottom right switches between six real plans (Lincoln, Delta Dental, Aetna, MetLife Standard and High, Cigna) and between a family and one person.
 
 
 
